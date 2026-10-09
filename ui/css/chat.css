@@ -1,0 +1,262 @@
+/* Основная страница: история слева, справа стол с ситуацией и переписка */
+
+:root {
+  --bubble-bot: #24402f;
+  --bubble-user: #34684c;
+  --border-gold: rgba(214, 178, 94, .6);
+}
+
+html, body { height: 100%; }
+body { color: var(--text); background: var(--rail); }
+.app { display: grid; grid-template-columns: 280px 1fr; height: 100vh; }
+
+/* ---------- Боковая панель: история ---------- */
+aside { display: flex; flex-direction: column; min-height: 0; background: var(--rail); border-right: 1px solid var(--line); }
+.brand { padding: 18px 16px 14px; border-bottom: 1px solid var(--line); }
+.brand h1 { margin: 0; font: 700 23px/1.15 var(--font-display); color: var(--gold); letter-spacing: .5px; }
+.suits { margin-top: 4px; font-size: 13px; letter-spacing: 6px; }
+.r { color: var(--red); }
+.new-chat {
+  margin: 14px 16px 6px; padding: 10px;
+  background: var(--gold-soft); color: var(--gold);
+  border: 1px solid var(--gold); border-radius: 10px;
+  font: inherit; font-weight: 700; text-align: left; cursor: pointer;
+}
+.history { flex: 1; overflow-y: auto; padding: 6px 8px 16px; }
+.group { padding: 12px 8px 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+.item { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 8px; color: #dfe7e2; text-decoration: none; }
+.item:hover, .item.active { background: var(--rail-2); }
+.item.active { box-shadow: inset 3px 0 0 var(--gold); }
+.mini { display: flex; gap: 2px; flex-shrink: 0; }
+.mini span {
+  width: 18px; height: 24px; border-radius: 3px;
+  background: var(--cream); color: var(--ink);
+  font: 700 10px/24px system-ui, sans-serif; text-align: center;
+}
+.mini span.r { color: var(--red); }
+.mini span.q { background: var(--rail-2); color: var(--gold); border: 1px solid var(--line); }
+.item-text { min-width: 0; }
+.item-title { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.item-sub { font-size: 12px; color: var(--muted); }
+
+.profile { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-top: 1px solid var(--line); }
+.avatar {
+  width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%;
+  background: var(--gold); color: var(--rail);
+  font: 700 15px/34px Georgia, serif; text-align: center;
+}
+.who { flex: 1; min-width: 0; }
+.who-name { font-size: 14px; font-weight: 600; }
+.who-mail { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.logout { padding: 4px 10px; font-size: 13px; color: var(--muted); text-decoration: none; border: 1px solid var(--line); border-radius: 8px; }
+.logout:hover { color: var(--gold); border-color: var(--gold); }
+
+/* ---------- Основная часть ---------- */
+.main { display: flex; flex-direction: column; min-height: 0; background: #1e070b; }
+.topbar {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 12px 24px; background: var(--rail); border-bottom: 1px solid var(--line);
+}
+.topbar h2 { margin: 0; font: 700 19px/1.2 var(--font-display); letter-spacing: .3px; }
+
+.scroll-area { flex: 1; min-height: 0; position: relative; display: flex; }
+.scroll { flex: 1; min-height: 0; overflow-y: auto;
+          /* низ ленты плавно затухает: кнопка «К столу» на границе не перекрывает читаемый текст */
+          -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 84px), transparent calc(100% - 20px));
+          mask-image: linear-gradient(to bottom, #000 calc(100% - 84px), transparent calc(100% - 20px)); }
+/* Виньетка - затемнение по краям. Отдельный неподвижный слой поверх прокрутки: не перерисовывается при скролле */
+.scroll-area::after { content: ""; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 120px rgba(8, 1, 3, .7); }
+
+/* Ковёр лежит на содержимом прокрутки, а не на самом контейнере: так он едет вместе с сообщениями,
+   но браузер не перерисовывает фон на каждом шаге прокрутки (в отличие от background-attachment: local). */
+.floor {
+  min-height: 100%;
+  background:
+    linear-gradient(rgba(10, 2, 4, .3), rgba(10, 2, 4, .3)),
+    radial-gradient(ellipse 70% 400px at 50% 0%, rgba(214, 178, 94, .1), transparent),
+    url("../img/noise.svg"),
+    url("../img/carpet.svg") calc(50% - 14px) 0,
+    linear-gradient(180deg, #4a1420 0%, #3a0f16 50%, #2a0a10 100%);
+}
+
+/* ---------- Переписка ---------- */
+.chat { padding: 20px 24px 92px; }   /* снизу запас под затухание ленты и кнопку «К столу» */
+.inner { max-width: 760px; margin: 0 auto; }
+.msg { display: flex; margin-bottom: 16px; }
+.msg.user { justify-content: flex-end; }
+.bubble { max-width: 85%; padding: 12px 16px; border: 1px solid var(--border-gold); border-radius: 14px; }
+.user .bubble { background: var(--bubble-user); color: #fff; border-bottom-right-radius: 4px; }
+.bot .bubble { background: var(--bubble-bot); border-bottom-left-radius: 4px; box-shadow: 0 6px 20px rgba(0, 0, 0, .35); }
+.rec { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.chip-icon { width: 30px; height: 30px; flex-shrink: 0; border-radius: 50%; background: #1f6b45; border: 4px dashed #fff; box-shadow: 0 0 0 2px #1f6b45; }
+.rec-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+.rec-action { font: 700 24px/1.1 var(--font-display); color: var(--gold); }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.tag { padding: 1px 10px; font-size: 12px; color: #c9d4cd; background: rgba(255, 255, 255, .06); border: 1px solid var(--line); border-radius: 999px; }
+.bot p { margin: 0; color: #e3ebe6; }
+
+/* ---------- Нижняя строка ввода ---------- */
+.composer { padding: 16px 24px 14px; background: linear-gradient(180deg, #24080d, #170507); border-top: 1px solid rgba(214, 178, 94, .25); }
+.composer-row { max-width: 760px; margin: 0 auto; display: flex; align-items: center; gap: 10px; }
+.input-pill {
+  flex: 1;
+  display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 16px;
+  background: linear-gradient(180deg, #1c3327, #13241b);
+  border: 1.5px solid var(--gold); border-radius: 999px;
+  box-shadow: 0 0 0 4px rgba(214, 178, 94, .12), 0 10px 28px rgba(0, 0, 0, .45), inset 0 1px 0 rgba(255, 255, 255, .06);
+}
+.pill-suit { font-size: 18px; line-height: 1; color: var(--gold); }
+.input-pill textarea {
+  flex: 1; height: 40px; padding: 9px 0; resize: none;
+  font: inherit; color: var(--text); background: transparent; border: 0; outline: none;
+  scrollbar-width: none;
+}
+.input-pill textarea::-webkit-scrollbar { display: none; }
+.input-pill textarea::placeholder { color: #9fb2a7; }
+.input-pill button {
+  flex-shrink: 0; height: 40px; padding: 0 22px; cursor: pointer;
+  background: linear-gradient(180deg, #e6c47a 0%, #c0923a 50%, #9a6f22 100%); color: #1b1408;
+  border: 0; border-radius: 999px; box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .18);
+  font: inherit; font-weight: 800; letter-spacing: .3px;
+}
+
+/* ---------- Стол (heads-up: два игрока), стоит в начале ленты над сообщениями ---------- */
+.scene { position: relative; height: 340px; display: flex; align-items: center; justify-content: center;
+         background: radial-gradient(ellipse 55% 70% at 50% 50%, rgba(255, 214, 150, .14) 0%, transparent 100%); }
+.poker-table {
+  position: relative; width: min(720px, 90%); height: 260px; border-radius: 130px;
+  background: var(--rail-leather);
+  box-shadow: 0 22px 50px rgba(0, 0, 0, .75), inset 0 2px 1px rgba(255, 255, 255, .14), inset 0 -3px 6px rgba(0, 0, 0, .6);
+}
+.felt {
+  position: absolute; inset: 22px; border-radius: 108px; overflow: hidden;
+  background: url("../img/noise-felt.svg"), var(--felt);
+  box-shadow: 0 0 0 5px var(--wood-1), 0 0 0 7px var(--wood-2), inset 0 0 50px rgba(0, 0, 0, .55), inset 0 0 10px rgba(0, 0, 0, .5);
+}
+.bet-line { position: absolute; inset: 22px 34px; border-radius: 96px; border: 2px solid rgba(214, 178, 94, .32); }
+
+/* Банк и улицы */
+.pot {
+  position: absolute; left: 50%; top: 18%; transform: translate(-50%, -50%);
+  padding: 1px 10px; font-size: 12px; color: #f1e3b8; background: rgba(0, 0, 0, .3); border-radius: 999px;
+}
+.board { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); display: flex; gap: 14px; }
+.street { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.street-slots { display: flex; gap: 5px; }
+.slot { width: 34px; height: 48px; border-radius: 5px; border: 1.5px dashed rgba(255, 255, 255, .35); background: rgba(0, 0, 0, .08); }
+.street-name { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: rgba(255, 255, 255, .45); }
+
+/* Карты: вы внизу слева, соперник внизу справа */
+.opp-cards { position: absolute; left: 68%; bottom: 20px; transform: translateX(-50%); display: flex; gap: 4px; }
+.back { width: 26px; height: 36px; border-radius: 4px; border: 2px solid #f1ede4;
+        background: repeating-linear-gradient(45deg, #7a2a2c 0 4px, #5e1e20 4px 8px); box-shadow: 0 2px 4px rgba(0, 0, 0, .3); }
+.hero-box {
+  position: absolute; left: 32%; bottom: 14px; transform: translateX(-50%);
+  display: flex; gap: 5px; padding: 5px 7px;
+  background: rgba(0, 0, 0, .15); border: 1.5px solid rgba(214, 178, 94, .55); border-radius: 8px;
+}
+.pcard {
+  width: 34px; height: 48px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: #fff; border: 1px solid #d9d2c2; border-radius: 5px; box-shadow: 0 2px 4px rgba(0, 0, 0, .3);
+  font: 700 15px/1 Georgia, serif; color: var(--ink);
+}
+.pcard small { margin-top: 1px; font-size: 14px; }
+.pcard.r { color: var(--red); }
+
+/* Ставка соперника и кнопка дилера у соперника (он на баттоне) */
+.bet { position: absolute; left: 68%; bottom: 68px; transform: translateX(-50%); display: flex; align-items: center; gap: 4px; font-size: 11px; color: #f1e3b8; }
+.bet i { display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: var(--red); border: 2px dashed #fff; }
+.dealer-btn {
+  position: absolute; left: calc(68% - 64px); bottom: 28px;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: #fff; color: var(--ink); box-shadow: 0 2px 4px rgba(0, 0, 0, .4);
+  font: 700 11px/20px system-ui, sans-serif; text-align: center;
+}
+
+/* Места: дилер сверху, вы внизу слева, соперник внизу справа.
+   Табличка в зелёных тонах, как сообщения в чате, с золотой окантовкой; фигурка целиком помещается внутри */
+.seat {
+  position: absolute; z-index: 2; transform: translate(-50%, -50%);
+  display: flex; align-items: center; gap: 10px;
+  min-height: 56px; padding: 5px 16px 5px 6px; text-align: left; white-space: nowrap;
+  background: linear-gradient(180deg, #2c4c3b 0%, #1b3125 100%);
+  border: 1.5px solid rgba(214, 178, 94, .6); border-radius: 12px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .1);
+  color: #f1e3b8;
+}
+.ava {
+  width: 42px; height: 42px; flex-shrink: 0; border-radius: 50%;
+  display: grid; place-items: center;
+}
+/* Аватар аккаунта (как в профиле) */
+.ava-me { background: var(--gold); color: var(--rail); border: 2px solid #f1e3b8; font: 700 18px/1 Georgia, serif; }
+/* Фигурки дилера и соперника - без круга, целиком внутри таблички */
+.figure { width: 44px; height: 44px; flex-shrink: 0; object-fit: contain; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .45)); }
+.seat b { display: block; font-size: 13px; letter-spacing: .4px; color: #fff; }
+.seat div span { display: block; margin-top: 1px; font-size: 11px; color: #a9bdb1; white-space: nowrap; }
+.seat.acted div span { color: var(--gold); }
+.seat.hero { border: 2px solid var(--gold); box-shadow: 0 6px 14px rgba(0, 0, 0, .55), 0 0 0 3px rgba(214, 178, 94, .18), inset 0 1px 0 rgba(255, 255, 255, .1); }
+.seat.hero b { color: var(--gold); }
+.s-dealer { left: 50%; top: 0; }
+.s-hero   { left: 32%; top: 100%; }
+.s-opp    { left: 68%; top: 100%; }
+
+/* ---------- Кнопка «К столу» ---------- */
+.scroll { scroll-behavior: smooth; scroll-timeline: --chat y; }
+.scroll-area { timeline-scope: --chat; }
+.to-table {
+  /* по центру, над строкой ввода с отступом от неё */
+  position: absolute; z-index: 3; left: 50%; top: calc(100% - 34px); transform: translate(-50%, -50%);
+  padding: 8px 18px; border-radius: 999px;
+  background: rgba(18, 26, 22, .94); color: var(--gold);
+  border: 1.5px solid var(--gold); box-shadow: 0 8px 20px rgba(0, 0, 0, .5);
+  font-weight: 700; text-decoration: none; white-space: nowrap;
+}
+.to-table:hover { background: #1d2a22; }
+/* Плашка проявляется, когда лента прокручена ниже стола. Анимация привязана к прокрутке (scroll-driven animations).
+   Браузеры без поддержки просто показывают кнопку всегда. */
+@supports (animation-timeline: scroll()) {
+  .to-table {
+    animation: to-table-show linear both;
+    animation-timeline: --chat;
+    animation-range: 220px 300px;
+  }
+}
+@keyframes to-table-show {
+  from { opacity: 0; visibility: hidden; transform: translate(-50%, -20%); }
+  to   { opacity: 1; visibility: visible; transform: translate(-50%, -50%); }
+}
+
+/* ---------- Телефон ---------- */
+@media (max-width: 760px) {
+  .app { grid-template-columns: 1fr; grid-template-rows: auto 1fr; height: auto; min-height: 100vh; }
+  aside { border-right: 0; border-bottom: 1px solid var(--line); }
+  .history { display: flex; gap: 8px; overflow-x: auto; padding: 4px 16px 12px; }
+  .group { display: none; }
+  .profile { order: -1; border-top: 0; border-bottom: 1px solid var(--line); }
+  .item { flex: 0 0 220px; background: var(--rail-2); }
+  .new-chat { margin: 12px 16px 8px; }
+  .topbar, .composer, .chat { padding-left: 16px; padding-right: 16px; }
+  .scene { height: 270px; }
+  .poker-table { width: 94%; height: 200px; border-radius: 80px; }
+  .felt { inset: 16px; border-radius: 64px; }
+  .bet-line { inset: 18px 20px; border-radius: 50px; }
+  .board { gap: 6px; }
+  .street-slots { gap: 3px; }
+  .slot, .pcard { width: 24px; height: 34px; }
+  .pcard { font-size: 11px; }
+  .pcard small { font-size: 10px; }
+  .back { width: 20px; height: 28px; }
+  .seat { gap: 6px; min-height: 44px; padding: 3px 10px 3px 4px; }
+  .seat b { font-size: 11px; }
+  .seat div span { font-size: 9px; }
+  .ava { width: 32px; height: 32px; }
+  .ava-me { font-size: 14px; }
+  .figure { width: 34px; height: 34px; }
+  .s-hero { left: 27%; }
+  .s-opp { left: 73%; }
+  .bet { bottom: 46px; }
+  .dealer-btn { left: calc(68% - 46px); bottom: 14px; }
+  .bubble { max-width: 100%; }
+}

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Покерный тренер - регистрация</title>
+<link rel="stylesheet" href="css/common.css">
+<link rel="stylesheet" href="css/auth.css">
+</head>
+<body>
+<main class="box wide">
+  <div class="brand">
+    <div class="chips"><span></span><span></span><span></span></div>
+    <h1>Регистрация</h1>
+    <p class="sub">Сохраняйте историю разборов и возвращайтесь к ним</p>
+  </div>
+
+  <form>
+    <div class="grid">
+      <div>
+        <label for="name">Имя или ник</label>
+        <input id="name" type="text" placeholder="Как к вам обращаться" autocomplete="nickname">
+      </div>
+      <div>
+        <label for="email">Email</label>
+        <input id="email" type="email" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div>
+        <label for="password">Пароль</label>
+        <input id="password" type="password" placeholder="От 8 символов" autocomplete="new-password">
+      </div>
+      <div>
+        <label for="password2">Повторите пароль</label>
+        <input id="password2" type="password" placeholder="••••••••" autocomplete="new-password">
+      </div>
+    </div>
+
+    <label for="level">Ваш уровень игры <span class="hint">- от него зависит подробность объяснений</span></label>
+    <select id="level">
+      <option>Только начинаю</option>
+      <option>Знаю правила, играю с друзьями</option>
+      <option>Играю регулярно</option>
+    </select>
+
+    <label class="check"><input type="checkbox"> Понимаю, что сервис - тренажёр для обучения и не предназначен для использования во время реальной игры</label>
+
+    <!-- В прототипе кнопка просто ведёт в чат; в приложении здесь будет отправка формы -->
+    <a class="btn" href="prototype.html">Создать аккаунт</a>
+  </form>
+
+  <p class="alt">Уже есть аккаунт? <a href="login.html">Войти</a></p>
+</main>
+</body>
+</html>
