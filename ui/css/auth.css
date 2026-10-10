@@ -1,0 +1,107 @@
+/* Страницы входа и регистрации: стол фиксированного размера на фоне и карточка с формой */
+
+html { scrollbar-gutter: stable; }
+
+body {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  color: var(--ink);
+  background: radial-gradient(ellipse 70% 60% at 50% 45%, #3a2a1e 0%, #1a120c 55%, #0b0908 100%) fixed, #0b0908;
+}
+
+/* Стол: борт (body::before), сукно с деревянной окантовкой (body::after), линия ставок (html::after) */
+body::before,
+body::after,
+html::after {
+  content: "";
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+body::before {
+  width: 980px; height: 600px; border-radius: 300px;
+  background: var(--rail-leather);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .7), inset 0 2px 1px rgba(255, 255, 255, .12), inset 0 -3px 6px rgba(0, 0, 0, .6);
+}
+body::after {
+  width: 924px; height: 544px; border-radius: 272px;
+  background: url("../img/noise-felt.svg"), var(--felt);
+  box-shadow: 0 0 0 6px var(--wood-1), 0 0 0 8px var(--wood-2), 0 0 0 10px #4a2a12, inset 0 0 60px rgba(0, 0, 0, .6), inset 0 0 12px rgba(0, 0, 0, .5);
+}
+html::after {
+  width: 850px; height: 474px; border-radius: 237px;
+  border: 2px solid rgba(214, 178, 94, .3);
+}
+
+/* Карточка формы */
+.box {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 400px;
+  padding: 28px 24px 22px;
+  background: var(--cream);
+  border-radius: 16px;
+  border-top: 4px solid var(--gold);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .35);
+}
+.box.wide { max-width: 560px; padding: 22px 24px 18px; }
+
+.brand { text-align: center; margin-bottom: 20px; }
+.box.wide .brand { margin-bottom: 6px; }
+h1 { margin: 0; font: 700 28px/1.15 var(--font-display); color: var(--felt-dark); }
+.sub { margin: 4px 0 0; color: #6a6355; font-size: 14px; }
+
+/* Веер карт (вход) */
+.fan { display: flex; justify-content: center; height: 64px; margin-bottom: 10px; }
+.fan span {
+  width: 40px; height: 56px; margin: 0 -6px;
+  background: #fff; border: 1px solid #d9d2c2; border-radius: 5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, .15);
+  font: 700 16px/56px Georgia, serif; text-align: center;
+}
+.fan span:nth-child(1) { transform: rotate(-14deg) translateY(6px); }
+.fan span:nth-child(2) { color: var(--red); }
+.fan span:nth-child(3) { transform: rotate(14deg) translateY(6px); }
+
+/* Фишки (регистрация) */
+.chips { display: flex; justify-content: center; gap: 6px; margin-bottom: 10px; }
+.chips span { width: 30px; height: 30px; border-radius: 50%; border: 4px dashed #fff; }
+.chips span:nth-child(1) { background: var(--felt-dark); box-shadow: 0 0 0 2px var(--felt-dark); }
+.chips span:nth-child(2) { background: var(--red); box-shadow: 0 0 0 2px var(--red); }
+.chips span:nth-child(3) { background: var(--ink); box-shadow: 0 0 0 2px var(--ink); }
+
+/* Поля формы */
+label { display: block; margin: 14px 0 4px; font-size: 14px; font-weight: 600; }
+input[type=email], input[type=password], input[type=text], select {
+  width: 100%; padding: 11px 12px;
+  font: inherit; background: #fff;
+  border: 1px solid #e6dcc5; border-radius: 10px;
+}
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+.hint { font-size: 12px; font-weight: 400; color: #6a6355; }
+.row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 12px; font-size: 14px; }
+.row label { display: inline-flex; align-items: center; gap: 6px; margin: 0; font-weight: 400; }
+.check { display: flex; align-items: flex-start; gap: 8px; margin-top: 14px; font-size: 13px; font-weight: 400; }
+.check input { margin-top: 3px; }
+
+a { color: #8a6d2b; font-weight: 600; }
+.btn {
+  display: block; width: 100%; margin-top: 18px; padding: 12px;
+  background: var(--felt-dark); color: #fff;
+  border-radius: 10px; text-align: center; font-weight: 800; text-decoration: none;
+}
+.alt { margin: 16px 0 0; text-align: center; font-size: 14px; color: #6a6355; }
+
+/* Телефон: стол вертикальный */
+@media (max-width: 600px) {
+  body::before { width: 360px; height: 640px; border-radius: 110px; }
+  body::after { width: 316px; height: 596px; border-radius: 88px; }
+  html::after { width: 270px; height: 550px; border-radius: 66px; }
+  .grid { grid-template-columns: 1fr; }
+}

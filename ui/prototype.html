@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Покерный тренер - прототип</title>
+<link rel="stylesheet" href="css/common.css">
+<link rel="stylesheet" href="css/chat.css">
+</head>
+<body>
+<div class="app">
+
+  <aside>
+    <div class="brand">
+      <h1>Покерный тренер</h1>
+      <div class="suits">♠<span class="r">♥</span>♣<span class="r">♦</span></div>
+    </div>
+    <button class="new-chat" type="button">+ Новая раздача</button>
+
+    <nav class="history" aria-label="История вопросов">
+      <div class="group">Сегодня</div>
+      <a class="item active" href="#">
+        <div class="mini"><span>A♠</span><span class="r">K♦</span></div>
+        <div class="item-text"><div class="item-title">AKo на BB против рейза</div><div class="item-sub">3-бет до 10 ББ</div></div>
+      </a>
+      <a class="item" href="#">
+        <div class="mini"><span>7♣</span><span class="r">7♥</span></div>
+        <div class="item-text"><div class="item-title">Пара семёрок на баттоне</div><div class="item-sub">Рейз 2.5 ББ</div></div>
+      </a>
+      <div class="group">Вчера</div>
+      <a class="item" href="#">
+        <div class="mini"><span>K♠</span><span>9♣</span></div>
+        <div class="item-text"><div class="item-title">Защита BB с K9o</div><div class="item-sub">Колл</div></div>
+      </a>
+      <a class="item" href="#">
+        <div class="mini"><span class="q">?</span></div>
+        <div class="item-text"><div class="item-title">Что такое 3-бет</div><div class="item-sub">Теория</div></div>
+      </a>
+      <div class="group">Ранее</div>
+      <a class="item" href="#">
+        <div class="mini"><span class="r">Q♥</span><span class="r">J♥</span></div>
+        <div class="item-text"><div class="item-title">QJs на баттоне, глубокие стеки</div><div class="item-sub">Рейз 3 ББ</div></div>
+      </a>
+      <a class="item" href="#">
+        <div class="mini"><span>5♠</span><span class="r">4♦</span></div>
+        <div class="item-text"><div class="item-title">54o на BB против 3x</div><div class="item-sub">Фолд</div></div>
+      </a>
+    </nav>
+
+    <div class="profile">
+      <div class="avatar">С</div>
+      <div class="who"><div class="who-name">Степан</div><div class="who-mail">stepan@example.com</div></div>
+      <a class="logout" href="login.html">Выйти</a>
+    </div>
+  </aside>
+
+  <section class="main">
+    <div class="topbar">
+      <h2>AKo на BB против рейза</h2>
+    </div>
+
+    <div class="scroll-area">
+    <div class="scroll">
+      <div class="floor">
+        <!-- Стол: ситуация из текущего вопроса. Дилер сверху, вы внизу слева, соперник внизу справа -->
+        <div class="scene" id="table">
+          <div class="poker-table">
+            <div class="felt">
+              <div class="bet-line"></div>
+              <div class="pot">Банк: 3.5 ББ</div>
+              <div class="board">
+                <div class="street"><div class="street-slots"><div class="slot"></div><div class="slot"></div><div class="slot"></div></div><div class="street-name">Флоп</div></div>
+                <div class="street"><div class="street-slots"><div class="slot"></div></div><div class="street-name">Тёрн</div></div>
+                <div class="street"><div class="street-slots"><div class="slot"></div></div><div class="street-name">Ривер</div></div>
+              </div>
+              <div class="bet"><i></i>2.5</div>
+              <div class="dealer-btn">D</div>
+              <div class="opp-cards"><div class="back"></div><div class="back"></div></div>
+              <div class="hero-box">
+                <div class="pcard">A<small>♠</small></div>
+                <div class="pcard r">K<small>♦</small></div>
+              </div>
+            </div>
+            <div class="seat s-dealer">
+              <img class="figure" src="img/dealer.png" alt="">
+              <div><b>Дилер</b></div>
+            </div>
+            <div class="seat s-hero hero">
+              <!-- аватар аккаунта, как в профиле слева внизу -->
+              <span class="ava ava-me">С</span>
+              <div><b>Вы · BB</b><span>100 ББ</span></div>
+            </div>
+            <div class="seat s-opp acted">
+              <img class="figure" src="img/opponent.png" alt="">
+              <div><b>Соперник · BTN / SB</b><span>рейз 2.5 ББ</span></div>
+            </div>
+          </div>
+        </div>
+
+        <main class="chat">
+          <div class="inner">
+            <div class="msg user">
+              <div class="bubble">Играем один на один, стеки по 100 ББ. Соперник на баттоне поднял до 2.5 ББ, у меня на большом блайнде туз-король разной масти. Что делать?</div>
+            </div>
+
+            <div class="msg bot">
+              <div class="bubble">
+                <div class="rec">
+                  <div class="chip-icon"></div>
+                  <div><div class="rec-label">Рекомендация</div><div class="rec-action">3-бет до 10 ББ</div></div>
+                </div>
+                <div class="tags">
+                  <span class="tag">AKo - сильный бродвей</span>
+                  <span class="tag">BB против баттона</span>
+                  <span class="tag">Стек 100 ББ</span>
+                </div>
+                <p>Один на один соперник открывается с баттона очень широко, и туз-король опережает почти весь его диапазон. Повышение до 10 ББ забирает банк сразу у слабых рук и строит большой банк против рук, которые продолжат хуже вас. После флопа вы будете действовать первым, поэтому выгодно сделать банк крупным уже сейчас, пока преимущество руки максимально.</p>
+              </div>
+            </div>
+
+            <div class="msg user">
+              <div class="bubble">А если у меня король-семь разной масти в той же ситуации?</div>
+            </div>
+
+            <div class="msg bot">
+              <div class="bubble">
+                <div class="rec">
+                  <div class="chip-icon"></div>
+                  <div><div class="rec-label">Рекомендация</div><div class="rec-action">Колл</div></div>
+                </div>
+                <div class="tags">
+                  <span class="tag">K7o - средняя рука</span>
+                  <span class="tag">BB против баттона</span>
+                  <span class="tag">Стек 100 ББ</span>
+                </div>
+                <p>Против широкого открытия один на один K7o слишком хороша для фолда: вы доплачиваете 1.5 ББ в банк 3.5 ББ и получаете хорошие шансы. Но для 3-бета рука слабовата - сильные руки соперника продолжат и будут вас опережать. Колл и игра после флопа - лучший вариант.</p>
+              </div>
+            </div>
+
+            <div class="msg user">
+              <div class="bubble">Соперник открывается с баттона почти каждую раздачу. Как часто мне защищать большой блайнд?</div>
+            </div>
+
+            <div class="msg bot">
+              <div class="bubble">
+                <div class="rec">
+                  <div class="chip-icon"></div>
+                  <div><div class="rec-label">Рекомендация</div><div class="rec-action">Защищать широко</div></div>
+                </div>
+                <div class="tags">
+                  <span class="tag">Теория</span>
+                  <span class="tag">BB против баттона</span>
+                  <span class="tag">Шансы банка 30%</span>
+                </div>
+                <p>Против рейза до 2.5 ББ вы доплачиваете 1.5 ББ в банк 4 ББ, то есть вам нужно выигрывать примерно 30% раздач. Один на один с этим справляется большинство рук: любые пары, любой туз, большинство одномастных и связанных карт. Сбрасывать стоит только самые слабые разномастные руки вроде 72o или 83o. Против такого частого открытия защищайте большой блайнд колами и иногда 3-бетами - примерно две трети рук.</p>
+              </div>
+            </div>
+
+            <div class="msg user">
+              <div class="bubble">Я сыграл колл с Q♥J♥ на большом блайнде. Флоп K♥ 7♥ 2♣, я первым прочекал, соперник поставил 2 ББ в банк 5 ББ. Что делать?</div>
+            </div>
+
+            <div class="msg bot">
+              <div class="bubble">
+                <div class="rec">
+                  <div class="chip-icon"></div>
+                  <div><div class="rec-label">Рекомендация</div><div class="rec-action">Чек-рейз до 7 ББ</div></div>
+                </div>
+                <div class="tags">
+                  <span class="tag">Флеш-дро</span>
+                  <span class="tag">9 аутов на флеш</span>
+                  <span class="tag">Шансы банка 22%</span>
+                </div>
+                <p>У вас сильное дро: 9 карт червей доделывают флеш, и до ривера он соберётся примерно в 35% случаев. Колл тоже прибыльный - вам нужно всего 22% (2 ББ из 9), но рейз лучше: соперник часто ставит на таком борде без пары и сбросит сразу, а если ответит, у вас остаётся много шансов собрать сильнейшую руку.</p>
+              </div>
+            </div>
+
+            <div class="msg user">
+              <div class="bubble">Он заколлировал рейз. Тёрн 4♠, флеш не пришёл. Я проверил, а соперник ставит 12 ББ в банк 19 ББ. Платить?</div>
+            </div>
+
+            <div class="msg bot">
+              <div class="bubble">
+                <div class="rec">
+                  <div class="chip-icon"></div>
+                  <div><div class="rec-label">Рекомендация</div><div class="rec-action">Фолд</div></div>
+                </div>
+                <div class="tags">
+                  <span class="tag">Ривер: 9 аутов ≈ 20%</span>
+                  <span class="tag">Нужно 39%</span>
+                  <span class="tag">Тёрн</span>
+                </div>
+                <p>До ривера осталась одна карта, флеш соберётся только в 20% случаев (9 аутов из 44). Чтобы колл окупался, нужно выигрывать 39% (12 ББ из 31), а такой большой ставкой после колла рейза соперник показывает сильную руку - король или лучше. Даже с учётом будущих выигрышей на ривере колл слишком дорогой.</p>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+    <!-- Появляется, когда стол ушёл из вида (scroll-driven animation в CSS, без JS) -->
+    <a class="to-table" href="#table">↑ К столу</a>
+    </div>
+
+    <div class="composer">
+      <div class="composer-row">
+        <form class="input-pill">
+          <span class="pill-suit" aria-hidden="true">♠</span>
+          <textarea placeholder="Опишите раздачу: ваши карты, позиция, действия соперника..." aria-label="Вопрос"></textarea>
+          <button type="button">Спросить</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+</body>
+</html>
