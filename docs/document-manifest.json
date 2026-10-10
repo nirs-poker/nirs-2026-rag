@@ -1,0 +1,41 @@
+{
+  "project": "Покерный тренер (НИРС 2026)",
+  "updated": "2026-10-10",
+  "statuses": {
+    "actual": "актуален",
+    "draft": "первая версия, описывает план",
+    "stub": "заготовка"
+  },
+  "documents": [
+    { "path": "README.md", "section": "root", "purpose": "Описание проекта, команда, запуск, структура, состояние", "status": "actual" },
+    { "path": "AGENTS.md", "section": "root", "purpose": "Правила для ИИ-агента и команды, связи документов, git", "status": "actual" },
+    { "path": "STATUS.md", "section": "root", "purpose": "Текущее состояние и следующий шаг", "status": "actual" },
+    { "path": "CHANGE_HISTORY.md", "section": "root", "purpose": "История изменений CH-*", "status": "actual" },
+
+    { "path": "docs/README.md", "section": "docs", "purpose": "Карта документов", "status": "actual" },
+    { "path": "docs/document-manifest.json", "section": "docs", "purpose": "Список всех документов", "status": "actual" },
+
+    { "path": "docs/Product/README.md", "section": "Product", "purpose": "Индекс раздела", "status": "actual" },
+    { "path": "docs/Product/01-context.md", "section": "Product", "purpose": "Цель, ценность, границы первой версии", "status": "actual" },
+    { "path": "docs/Product/02-users-and-scenarios.md", "section": "Product", "purpose": "Роли, основной, дополнительные и негативные сценарии", "status": "actual" },
+    { "path": "docs/Product/03-requirements.md", "section": "Product", "purpose": "Требования REQ-* и проверки GWT-*", "status": "actual" },
+    { "path": "docs/Product/04-interface-and-behavior.md", "section": "Product", "purpose": "Экраны, элементы, действия, состояния, валидации", "status": "actual" },
+    { "path": "docs/Product/05-rules-and-data-meaning.md", "section": "Product", "purpose": "Термины, смысл данных, правила R-*, источники корпуса", "status": "actual" },
+
+    { "path": "docs/Tech/README.md", "section": "Tech", "purpose": "Индекс раздела", "status": "actual" },
+    { "path": "docs/Tech/01-architecture.md", "section": "Tech", "purpose": "Компоненты, путь запроса, стек", "status": "draft" },
+    { "path": "docs/Tech/02-running.md", "section": "Tech", "purpose": "Запуск макета и приложения, настройки", "status": "actual" },
+    { "path": "docs/Tech/03-data.md", "section": "Tech", "purpose": "Хранение, схема БД, восстановление, формат benchmark", "status": "draft" },
+    { "path": "docs/Tech/04-api-and-access.md", "section": "Tech", "purpose": "API сервера и правила доступа", "status": "draft" },
+    { "path": "docs/Tech/05-verification.md", "section": "Tech", "purpose": "Ручные проверки макета, автотесты, benchmark и метрики", "status": "draft" },
+    { "path": "docs/Tech/WORKSPACE_MAP.md", "section": "Tech", "purpose": "Карта кода: сейчас и план", "status": "actual" },
+
+    { "path": "docs/Service/README.md", "section": "Service", "purpose": "Индекс раздела", "status": "actual" },
+    { "path": "docs/Service/decisions.md", "section": "Service", "purpose": "Решения D-* и открытые вопросы Q-*", "status": "actual" },
+    { "path": "docs/Service/sources.md", "section": "Service", "purpose": "Источники требований S-*", "status": "actual" },
+    { "path": "docs/Service/verification.md", "section": "Service", "purpose": "Протокол проверок V-*", "status": "actual" },
+
+    { "path": "code/server/README.md", "section": "code", "purpose": "Место для сервера, поиска и RAG", "status": "stub" },
+    { "path": "code/tests/README.md", "section": "code", "purpose": "Место для автотестов и benchmark", "status": "stub" }
+  ]
+}
