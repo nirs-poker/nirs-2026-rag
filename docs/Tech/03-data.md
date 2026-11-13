@@ -8,7 +8,9 @@
 |---|---|---|
 | Пользователи | БД (SQLite, Q-003) | Резервная копия файла БД |
 | Раздачи и сообщения | БД | Резервная копия файла БД |
+| Набор PokerBench (решения солвера, CSV) | `data/pokerbench/preflop/`, `data/pokerbench/postflop/` | Из git или с Hugging Face: `RZ412/PokerBench` |
 | Корпус (исходные документы) | `code/server/corpus/` в репозитории | Из git |
+| Фрагменты-решения | Собираются скриптом из `data/pokerbench/` | Пересобрать из CSV |
 | Источники корпуса | `code/server/corpus/SOURCES.md` | Из git |
 | BM25-индекс | Строится из корпуса при запуске или командой | Пересобрать из корпуса |
 | Benchmark | `code/tests/benchmark/theory.jsonl`, `hands.jsonl` | Из git |
@@ -24,7 +26,8 @@ hands(id, user_id -> users.id, title, created_at, updated_at)
 messages(id, hand_id -> hands.id, role: user|assistant, text, created_at)
 answers(message_id -> messages.id, kind: theory|hand, topic, action, size_bb, tags JSON,
         explanation, example, situation JSON, math JSON, fragment_ids JSON,
-        status: ok|clarify|no_sources|off_topic|error)
+        action_source: solution|math,
+        status: ok|clarify|no_sources|unsupported|off_topic|error)
 ```
 
 - Пароли хранятся только в виде хеша (`R-010`).
@@ -33,11 +36,33 @@ answers(message_id -> messages.id, kind: theory|hand, topic, action, size_bb, ta
 
 ## Фрагменты корпуса
 
-Каждый фрагмент: `id`, заголовок, текст (100-300 слов), id документа-источника, тип: `rules` (правила), `glossary` (термин), `strategy` (стратегия). Один фрагмент - один раздел, один термин или одна ситуация (например, "Колл" или "BB против рейза баттона").
+Каждый фрагмент: `id`, заголовок, текст (100-300 слов), id документа-источника, тип: `rules` (правила), `glossary` (термин), `strategy` (стратегия), `solution` (решение). Один фрагмент - один раздел, один термин или одна ситуация (например, "Колл" или "BB против рейза баттона").
+
+Фрагмент-решение (`solution`) собирается из PokerBench: одна точка принятия решения (позиции, линия торговли, общие карты) и руки, разложенные по действиям. В тексте руки перечислены явно (`AKo`, `K7s`), а не диапазоном (`K7s+`), чтобы поиск по словам находил руку из вопроса. Ограничение на 100-300 слов к таким фрагментам не относится.
+
+## Набор PokerBench
+
+Источник: Hugging Face `RZ412/PokerBench`, статья arXiv:2501.08328, лицензия Apache-2.0. Стол на шесть позиций, стеки 100 ББ. В репозитории только CSV; файлы JSON с текстовыми описаниями тех же ситуаций не хранятся (самый большой - 535 МБ, лимит GitHub - 100 МБ на файл).
+
+| Файл | Строк | Назначение |
+|---|---|---|
+| `preflop/preflop_60k_train_set_game_scenario_information.csv` | 63 200 | Источник фрагментов-решений для префлопа |
+| `preflop/preflop_1k_test_set_game_scenario_information.csv` | 1 000 | Benchmark |
+| `postflop/postflop_500k_train_set_game_scenario_information.csv` | 500 000 | Источник фрагментов-решений после флопа |
+| `postflop/postflop_10k_test_set_game_scenario_information.csv` | 10 000 | Benchmark |
+
+Что важно знать о данных (проверено, см. `V-003` в `docs/Service/verification.md`):
+
+- В строке одно действие, а не частоты: авторы отбирали руки, где солвер выбирает одно действие чаще чем в 50% случаев. Пограничных рук в наборе нет.
+- Префлоп: 2 342 точки принятия решения (линия торговли + позиция). В линию входят все игроки, в том числе те, кто ещё в раздаче; сбросившие без ставки не записываются. Действия в обучающей части пересэмплированы (30 000 фолдов, 25 000 коллов, 8 200 рейзов), поэтому доля действий не равна их частоте в игре.
+- После флопа: 23 префлоп-линии (банки без 3-бета и 3-бет-поты), всегда двое игроков, **всего 22 разных флопа**. Решений на флопе 6%, на тёрне 41%, на ривере 52%. Для произвольного флопа решения нет (`R-016`).
+- После флопа `hero_position` содержит `IP` или `OOP`, а не место за столом (в описании на Hugging Face указано иначе). Места двух игроков берутся из `preflop_action`.
+- Колонка `aggressor_position` не соответствует своему описанию, в сборке не используется.
+- `RAISE_16` в `postflop_action` означает рейз до 16 ББ. `pot_size` включает ставку, на которую отвечает пользователь; размеры округлены до целых ББ.
 
 ## Формат benchmark
 
-Две части.
+Три части.
 
 **Теория** - `code/tests/benchmark/theory.jsonl`, один вопрос на строку:
 
@@ -52,7 +77,9 @@ answers(message_id -> messages.id, kind: theory|hand, topic, action, size_bb, ta
 **Раздачи** - `code/tests/benchmark/hands.jsonl`, одна раздача на строку:
 
 ```json
-{"id": "hu-pf-001", "question": "Играем один на один, стеки 100 ББ. Соперник на баттоне поднял до 2.5 ББ, у меня AKo на большом блайнде. Что делать?",
+{"id": "pf-001", "question": "Стеки 100 ББ. Баттон поднял до 2.5 ББ, малый блайнд сбросил, у меня AKo на большом блайнде. Что делать?",
  "expected_action": "3-бет", "acceptable_actions": ["3-бет"],
- "relevant_fragments": ["hu-bb-vs-btn-open"]}
+ "relevant_fragments": ["sol-pf-btn-open-bb"]}
 ```
+
+**Тест PokerBench** - тестовые CSV из `data/pokerbench/` читаются как есть: ситуация уже в структурированном виде, эталон - колонка `correct_decision`. Эта часть проверяет поиск решения и выбор действия без разбора текста вопроса.

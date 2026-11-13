@@ -27,7 +27,7 @@
 
 Запрос:
 ```json
-{ "text": "Играем один на один, стеки по 100 ББ. Соперник на баттоне поднял до 2.5 ББ, у меня на большом блайнде туз-король разной масти. Что делать?" }
+{ "text": "Стеки по 100 ББ. Баттон поднял до 2.5 ББ, малый блайнд сбросил, у меня на большом блайнде туз-король разной масти. Что делать?" }
 ```
 
 Ответ на теорию (`kind: theory`), например на "Что такое колл?":
@@ -51,26 +51,30 @@
   "status": "ok",
   "kind": "hand",
   "answer": {
-    "action": "3-бет", "size_bb": 10,
+    "action": "3-бет", "size_bb": 13, "action_source": "solution",
     "tags": ["AKo - сильный бродвей", "BB против баттона", "Стек 100 ББ"],
     "explanation": "...",
-    "fragment_ids": ["hu-bb-vs-btn-open", "concept-position"]
+    "fragment_ids": ["sol-pf-btn-open-bb", "concept-position"]
   },
   "situation": {
     "hero_cards": ["As", "Kd"], "hero_position": "BB",
     "villain_position": "BTN", "stack_bb": 100,
-    "actions": [{"street": "preflop", "position": "BTN", "action": "рейз", "size_bb": 2.5}],
-    "board": [], "pot_bb": 3.5, "to_call_bb": 1.5
+    "actions": [{"street": "preflop", "position": "BTN", "action": "рейз", "size_bb": 2.5},
+                {"street": "preflop", "position": "SB", "action": "фолд"}],
+    "board": [], "pot_bb": 4, "to_call_bb": 1.5
   },
-  "math": { "pot_odds_pct": 30 }
+  "math": { "pot_odds_pct": 27 }
 }
 ```
+
+`action_source`: `solution` - действие взято из решения PokerBench (`R-015`); `math` - оценка по математике после флопа (`R-016`), клиент показывает пометку.
 
 Другие статусы:
 
 | status | Когда | Что в ответе |
 |---|---|---|
 | `clarify` | Вопрос о раздаче, но не хватает данных (`REQ-011`) | `missing`: список недостающих полей, текст-вопрос |
-| `no_sources` | Нет фрагментов выше порога (`REQ-012`) | Текст пояснения, без `action` |
+| `no_sources` | Нет фрагментов выше порога или нет решения на префлопе (`REQ-012`) | Текст пояснения, без `action` |
+| `unsupported` | Раздача вне границ (`REQ-019`, `R-017`) | Текст о том, какие раздачи разбираются, без `action` |
 | `off_topic` | Вопрос не о покере (`REQ-016`) | Текст отказа |
 | `error` | Ошибка LLM (`REQ-013`), код ответа `502` | Текст ошибки; вопрос сохранён, можно повторить |
