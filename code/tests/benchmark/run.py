@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from statistics import mean
@@ -11,7 +12,7 @@ from statistics import mean
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parents[1] / "server"))
 
-from rag import LLM, RAG, ModelError
+from rag import LLM, RAG, ModelError, SYSTEM
 from retrieval import BM25, CORPUS, TOP_K, load_corpus
 
 QUESTIONS = HERE / "questions.jsonl"
@@ -62,7 +63,9 @@ def run(args):
     depth = max(args.k, args.mrr_depth or len(documents))
     by_id = {doc.id: doc for doc in documents}
     rows = load_questions(documents)
-    for row in rows:
+    for position, row in enumerate(rows):
+        if position and not args.search_only:
+            time.sleep(args.delay)
         question = row["question"]
         row["retrieved"] = [
             {"id": hit.document.id, "score": round(hit.score, 6)} for hit in index.search(question, depth)
@@ -73,7 +76,16 @@ def run(args):
                     {"id": doc.id, "title": doc.title, "text": doc.text}
                     for doc in (by_id[hit["id"]] for hit in row["retrieved"][:args.k])
                 ]
-                result = rag.ask(question, args.k)
+                row["attempt_errors"] = []
+                for attempt in range(args.retries + 1):
+                    try:
+                        result = rag.ask(question, args.k)
+                        break
+                    except ModelError as error:
+                        row["attempt_errors"].append(str(error))
+                        if attempt == args.retries:
+                            raise
+                        time.sleep(30)
                 row.update(status=result["status"], answer=result["answer"],
                            used_sources=[source["id"] for source in result["sources"]])
             except ModelError as error:
@@ -84,6 +96,9 @@ def run(args):
         "date_utc": datetime.now(timezone.utc).isoformat(),
         "model": None if args.search_only else model.model, "k": args.k,
         "mrr_depth": args.mrr_depth, "search_only": args.search_only,
+        "system_prompt": None if args.search_only else SYSTEM,
+        "generation": None if args.search_only else {"temperature": 0, "reasoning_effort": "low", "max_tokens": 700},
+        "delay_seconds": args.delay, "retries": args.retries,
         "corpus_sha256": hashlib.sha256(CORPUS.read_bytes()).hexdigest(),
         "questions_sha256": hashlib.sha256(QUESTIONS.read_bytes()).hexdigest(),
         "metrics": metrics, "questions": rows,
@@ -123,10 +138,14 @@ def main():
     parser.add_argument("--k", type=int, default=TOP_K)
     parser.add_argument("--mrr-depth", type=int, help="Без параметра MRR считается по всей выдаче.")
     parser.add_argument("--output", type=Path, default=HERE / "results" / "local.json")
+    parser.add_argument("--delay", type=float, default=0, help="Пауза между вопросами в секундах.")
+    parser.add_argument("--retries", type=int, default=0, help="Повторы ошибки LLM (пауза 30 секунд).")
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--search-only", action="store_true")
     mode.add_argument("--grades", type=Path, help="Добавить ручные оценки к сохранённому прогону.")
     args = parser.parse_args()
+    if args.delay < 0 or not 0 <= args.retries <= 3:
+        parser.error("Задержка должна быть неотрицательной, число повторов — от 0 до 3.")
     if not 1 <= args.k <= 30 or (args.mrr_depth is not None and not 1 <= args.mrr_depth <= 30):
         parser.error("Глубины поиска должны быть от 1 до 30.")
     return grade(args) if args.grades else run(args)
