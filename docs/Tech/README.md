@@ -11,4 +11,5 @@
 | [03-data.md](03-data.md) | Что хранится, где, как восстановить |
 | [04-api-and-access.md](04-api-and-access.md) | API сервера и правила доступа |
 | [05-verification.md](05-verification.md) | Тесты, benchmark, метрики, как запускать |
+| [06-rag-checkpoint.md](06-rag-checkpoint.md) | Спецификация КТ по RAG, документы и контрольные вопросы |
 | [WORKSPACE_MAP.md](WORKSPACE_MAP.md) | Карта кода: где что лежит |
