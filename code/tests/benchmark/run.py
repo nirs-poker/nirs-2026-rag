@@ -13,7 +13,7 @@ from statistics import mean
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parents[1] / "server"))
 
-from rag import LLM, RAG, ModelError
+from rag import LLM, RAG, ModelError, SYSTEM
 from retrieval import BM25, CORPUS, TOP_K, load_corpus
 
 QUESTIONS = HERE / "questions.jsonl"
@@ -58,13 +58,19 @@ def save(path, result):
     temporary.replace(path)
 
 
-def ask_with_retry(rag, question, k):
-    for attempt in range(4):
+def ask_with_retry(rag, question, k, retries, errors):
+    for attempt in range(max(3, retries) + 1):
         try:
             return rag.ask(question, k)
         except ModelError as error:
             cause = error.__cause__
-            if not isinstance(cause, HTTPError) or cause.code != 429 or attempt == 3:
+            errors.append(str(error))
+            if not isinstance(cause, HTTPError) or cause.code != 429:
+                if attempt >= retries:
+                    raise
+                time.sleep(30)
+                continue
+            if attempt >= 3:
                 raise
             delay = cause.headers.get("Retry-After", "") if cause.headers else ""
             seconds = int(delay) + 1 if delay.isascii() and delay.isdigit() else 60 * (attempt + 1)
@@ -93,6 +99,9 @@ def run(args):
         "date_utc": datetime.now(timezone.utc).isoformat(),
         "model": None if args.search_only else model.model, "k": args.k,
         "mrr_depth": args.mrr_depth, "search_only": args.search_only,
+        "system_prompt": None if args.search_only else SYSTEM,
+        "generation": None if args.search_only else ({"temperature": 0, "reasoning_effort": "low", "max_tokens": 2048} if model.base_url == "https://api.groq.com/openai/v1" and model.model in ("openai/gpt-oss-20b", "openai/gpt-oss-120b") else {"temperature": 0, "max_tokens": 450}),
+        "delay_seconds": args.delay, "retries": args.retries,
         "corpus_sha256": hashlib.sha256(CORPUS.read_bytes()).hexdigest(),
         "questions_sha256": hashlib.sha256(QUESTIONS.read_bytes()).hexdigest(),
         "metrics": metrics, "questions": rows,
@@ -109,6 +118,7 @@ def run(args):
         if all(row.get("status") in ("ok", "no_sources") for row in rows):
             print("Все вопросы уже обработаны.")
             return 0
+    sent = False
     for row in rows:
         if args.resume and row.get("status") in ("ok", "no_sources"):
             continue
@@ -119,7 +129,10 @@ def run(args):
                     {"id": doc.id, "title": doc.title, "text": doc.text}
                     for doc in (by_id[hit["id"]] for hit in row["retrieved"][:args.k])
                 ]
-                result = ask_with_retry(rag, question, args.k)
+                if sent:
+                    time.sleep(args.delay)
+                sent = True
+                result = ask_with_retry(rag, question, args.k, args.retries, row.setdefault("attempt_errors", []))
                 row.pop("error", None)
                 row.update(status=result["status"], answer=result["answer"],
                            used_sources=[source["id"] for source in result["sources"]])
@@ -166,11 +179,15 @@ def main():
     parser.add_argument("--k", type=int, default=TOP_K)
     parser.add_argument("--mrr-depth", type=int, help="Без параметра MRR считается по всей выдаче.")
     parser.add_argument("--output", type=Path, default=HERE / "results" / "local.json")
+    parser.add_argument("--delay", type=float, default=0, help="Пауза между вопросами в секундах.")
+    parser.add_argument("--retries", type=int, default=0, help="Повторы ошибки LLM (пауза 30 секунд).")
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--search-only", action="store_true")
     mode.add_argument("--resume", action="store_true", help="Продолжить неполный отчёт.")
     mode.add_argument("--grades", type=Path, help="Добавить ручные оценки к сохранённому прогону.")
     args = parser.parse_args()
+    if args.delay < 0 or not 0 <= args.retries <= 3:
+        parser.error("Задержка должна быть неотрицательной, число повторов — от 0 до 3.")
     if not 1 <= args.k <= 30 or (args.mrr_depth is not None and not 1 <= args.mrr_depth <= 30):
         parser.error("Глубины поиска должны быть от 1 до 30.")
     return grade(args) if args.grades else run(args)
