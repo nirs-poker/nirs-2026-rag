@@ -1,10 +1,14 @@
 import unittest
+from unittest.mock import patch
+import io
+import json
 from pathlib import Path
 import sys
+from urllib.error import HTTPError
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "server"))
 
-from rag import RAG, ModelError
+from rag import LLM, RAG, ModelError
 from retrieval import BM25, Document, tokens
 
 
@@ -33,6 +37,47 @@ class RetrievalTests(unittest.TestCase):
 
 
 class RagTests(unittest.TestCase):
+    def test_groq_defaults_and_key_alias(self):
+        with patch.dict("os.environ", {
+            "GROQ_API_KEY": "test-groq-key", "LLM_API_KEY": "old-generic-key",
+        }, clear=True):
+            client = LLM.from_env()
+        self.assertEqual(client.base_url, "https://api.groq.com/openai/v1")
+        self.assertEqual(client.model, "openai/gpt-oss-20b")
+        self.assertEqual(client.api_key, "test-groq-key")
+
+    def test_groq_auth_error_does_not_expose_request(self):
+        client = LLM("https://api.groq.com/openai/v1", "openai/gpt-oss-20b", "secret")
+        with patch("rag.urlopen", side_effect=HTTPError("url", 401, "Unauthorized", {}, None)):
+            with self.assertRaisesRegex(ModelError, "Groq отклонил ключ API") as error:
+                client.answer("Что такое колл?", [])
+        self.assertNotIn("secret", str(error.exception))
+
+    def test_forbidden_is_not_reported_as_invalid_key(self):
+        client = LLM("https://api.groq.com/openai/v1", "openai/gpt-oss-20b", "secret")
+        with patch("rag.urlopen", side_effect=HTTPError("url", 403, "Forbidden", {}, None)):
+            with self.assertRaisesRegex(ModelError, "HTTP 403"):
+                client.answer("Вопрос", [])
+
+    def test_groq_request_uses_low_reasoning_effort(self):
+        requests = []
+
+        def fake_urlopen(request, timeout):
+            requests.append(request)
+            return io.BytesIO(json.dumps({
+                "choices": [{"finish_reason": "stop", "message": {"content": json.dumps({
+                    "answer": "Ответ", "sources": [], "supported": False,
+                })}}],
+            }).encode())
+
+        client = LLM("https://api.groq.com/openai/v1", "openai/gpt-oss-20b", "test-key")
+        with patch("rag.urlopen", side_effect=fake_urlopen):
+            client.answer("Вопрос", [])
+        payload = json.loads(requests[0].data)
+        self.assertEqual(requests[0].get_header("User-agent"), "nirs-poker-trainer/1.0")
+        self.assertEqual(payload["reasoning_effort"], "low")
+        self.assertEqual(payload["max_tokens"], 700)
+
     def test_only_ranked_text_is_sent_and_cited(self):
         class Model:
             def answer(self, question, documents):

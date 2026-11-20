@@ -3,7 +3,7 @@
 import json
 import os
 from dataclasses import dataclass
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from retrieval import TOP_K
@@ -51,9 +51,9 @@ class LLM:
     @classmethod
     def from_env(cls):
         return cls(
-            os.getenv("LLM_BASE_URL", "http://127.0.0.1:8081/v1").rstrip("/"),
-            os.getenv("LLM_MODEL", "qwen3-1.7b"),
-            os.getenv("LLM_API_KEY", ""),
+            os.getenv("LLM_BASE_URL", "https://api.groq.com/openai/v1").rstrip("/"),
+            os.getenv("LLM_MODEL", "openai/gpt-oss-20b"),
+            os.getenv("GROQ_API_KEY") or os.getenv("LLM_API_KEY", ""),
         )
 
     def answer(self, question, documents):
@@ -65,9 +65,10 @@ class LLM:
         ]
         payload = {
             "model": self.model, "messages": messages, "temperature": 0,
-            "max_tokens": 450, "response_format": RESPONSE_FORMAT,
+            "max_tokens": 700, "reasoning_effort": "low",
+            "response_format": RESPONSE_FORMAT,
         }
-        headers = {"Content-Type": "application/json"}
+        headers = {"Content-Type": "application/json", "User-Agent": "nirs-poker-trainer/1.0"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
         request = Request(f"{self.base_url}/chat/completions",
@@ -79,6 +80,18 @@ class LLM:
             if choice.get("finish_reason") == "length":
                 raise ValueError("Ответ модели обрезан.")
             result = json.loads(choice["message"]["content"])
+        except HTTPError as error:
+            if error.code == 401:
+                message = "Groq отклонил ключ API. Проверьте GROQ_API_KEY и повторите запрос."
+            elif error.code == 403:
+                message = "Сервис запретил запрос (HTTP 403). Возможна блокировка HTTP-клиента защитой сервиса."
+            elif error.code == 404:
+                message = "Groq не нашёл адрес или модель. Проверьте LLM_BASE_URL и LLM_MODEL."
+            elif error.code == 429:
+                message = "Groq временно ограничил запросы. Повторите запрос позже."
+            else:
+                message = f"Groq вернул HTTP {error.code}. Проверьте настройки и повторите запрос."
+            raise ModelError(message) from error
         except (URLError, OSError, ValueError, KeyError, TypeError, IndexError) as error:
             raise ModelError("Не удалось получить ответ модели. Проверьте запуск LLM и повторите вопрос.") from error
         if (not isinstance(result, dict) or type(result.get("supported")) is not bool

@@ -57,7 +57,7 @@ form.addEventListener("submit", async (event) => {
   reply.article.classList.add("pending");
   toLatest();
   try {
-    const response = await fetch("/ask", {
+    const response = await fetch("/api/ask", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ question }),

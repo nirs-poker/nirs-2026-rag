@@ -4,6 +4,8 @@
 
 Из корня проекта:
 
+Для генерации используется Groq `openai/gpt-oss-20b`. Benchmark читает ключ из окружения процесса, но не загружает `.env` автоматически: сначала выполните шаг загрузки переменных из [инструкции запуска](../../../docs/Tech/02-running.md#cli-и-benchmark). `--search-only` не требует ключа. Сквозной прогон отправляет вопросы и найденные фрагменты в Groq.
+
 ```powershell
 python -X utf8 code/tests/benchmark/run.py --search-only --output code/tests/benchmark/results/search.json
 python -X utf8 code/tests/benchmark/run.py
