@@ -1,7 +1,7 @@
 # code/server
 
-В КТ2 `prepare_corpus.py` выгружает согласованные разделы, `retrieval.py` строит индекс, `rag.py` связывает выдачу с ответом. Запуск и проверка описаны в [README проекта](../../README.md).
+В КТ2 `prepare_corpus.py` выгружает согласованные разделы, `retrieval.py` строит индекс BM25, а `rag.py` передаёт найденные фрагменты в Groq и проверяет ссылки модели. `ask.py` запускает один вопрос из командной строки, `web.py` поднимает локальный чат.
 
-Сервер, поиск BM25 и RAG. Пока пусто: на контрольной точке 1 работающий RAG не требуется.
+Перед запуском задайте `GROQ_API_KEY` в окружении или создайте `.env` из `.env.example` по [инструкции запуска](../../docs/Tech/02-running.md). Код по умолчанию использует `https://api.groq.com/openai/v1` и модель `openai/gpt-oss-20b`.
 
-Планируемые модули: [docs/Tech/WORKSPACE_MAP.md](../../docs/Tech/WORKSPACE_MAP.md).
+Веб-сервер автоматически читает корневой `.env`: `python -X utf8 code/server/web.py`. Фронт и API доступны на `http://127.0.0.1:8000`; вопросы — `POST /api/ask`, проверка доступности — `GET /api/health`. Контракт описан в [API](../../docs/Tech/04-api-and-access.md).

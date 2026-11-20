@@ -1,4 +1,4 @@
-/* Основная страница: история слева, справа стол с ситуацией и переписка */
+/* Основная страница: чаты слева, общий стол и лента раздач в центре */
 
 :root {
   --bubble-bot: #24402f;
@@ -8,7 +8,7 @@
 
 html, body { height: 100%; }
 body { color: var(--text); background: var(--rail); }
-.app { display: grid; grid-template-columns: 280px 1fr; height: 100vh; }
+.app { display: grid; grid-template-columns: 236px minmax(0, 1fr); height: 100dvh; }
 
 /* ---------- Боковая панель: история ---------- */
 aside { display: flex; flex-direction: column; min-height: 0; background: var(--rail); border-right: 1px solid var(--line); }
@@ -27,17 +27,7 @@ aside { display: flex; flex-direction: column; min-height: 0; background: var(--
 .item { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 8px; color: #dfe7e2; text-decoration: none; }
 .item:hover, .item.active { background: var(--rail-2); }
 .item.active { box-shadow: inset 3px 0 0 var(--gold); }
-.mini { display: flex; gap: 2px; flex-shrink: 0; }
-.mini span {
-  width: 18px; height: 24px; border-radius: 3px;
-  background: var(--cream); color: var(--ink);
-  font: 700 10px/24px system-ui, sans-serif; text-align: center;
-}
-.mini span.r { color: var(--red); }
-.mini span.q { background: var(--rail-2); color: var(--gold); border: 1px solid var(--line); }
-.item-text { min-width: 0; }
 .item-title { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.item-sub { font-size: 12px; color: var(--muted); }
 
 .profile { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-top: 1px solid var(--line); }
 .avatar {
@@ -58,14 +48,24 @@ aside { display: flex; flex-direction: column; min-height: 0; background: var(--
   padding: 12px 24px; background: var(--rail); border-bottom: 1px solid var(--line);
 }
 .topbar h2 { margin: 0; font: 700 19px/1.2 var(--font-display); letter-spacing: .3px; }
+@supports (timeline-scope: --review-table) and (view-timeline: --review-table block) and (animation-range: exit 99% exit 100%) {
+  .main { timeline-scope: --review-table; }
+  .hand-view .scene { view-timeline: --review-table block; }
+  .table-return {
+    animation: show-table-return 1s steps(1, end) both;
+    animation-timeline: --review-table;
+    animation-range: exit 99% exit 100%;
+  }
+  @keyframes show-table-return {
+    from { visibility: hidden; }
+    to { visibility: visible; }
+  }
+}
 
-.scroll-area { flex: 1; min-height: 0; position: relative; display: flex; }
-.scroll { flex: 1; min-height: 0; overflow-y: auto;
-          /* низ ленты плавно затухает: кнопка «К столу» на границе не перекрывает читаемый текст */
-          -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 84px), transparent calc(100% - 20px));
-          mask-image: linear-gradient(to bottom, #000 calc(100% - 84px), transparent calc(100% - 20px)); }
-/* Виньетка - затемнение по краям. Отдельный неподвижный слой поверх прокрутки: не перерисовывается при скролле */
-.scroll-area::after { content: ""; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 120px rgba(8, 1, 3, .7); }
+.scroll { flex: 1; min-height: 0; overflow: auto; }
+@media (prefers-reduced-motion: no-preference) {
+  .scroll { scroll-behavior: smooth; }
+}
 
 /* Ковёр лежит на содержимом прокрутки, а не на самом контейнере: так он едет вместе с сообщениями,
    но браузер не перерисовывает фон на каждом шаге прокрутки (в отличие от background-attachment: local). */
@@ -80,7 +80,7 @@ aside { display: flex; flex-direction: column; min-height: 0; background: var(--
 }
 
 /* ---------- Переписка ---------- */
-.chat { padding: 20px 24px 92px; }   /* снизу запас под затухание ленты и кнопку «К столу» */
+.chat { padding: 20px 24px 52px; }
 .inner { max-width: 760px; margin: 0 auto; }
 .msg { display: flex; margin-bottom: 16px; }
 .msg.user { justify-content: flex-end; }
@@ -96,7 +96,11 @@ aside { display: flex; flex-direction: column; min-height: 0; background: var(--
 .bot p { margin: 0; color: #e3ebe6; }
 
 /* ---------- Нижняя строка ввода ---------- */
-.composer { padding: 16px 24px 14px; background: linear-gradient(180deg, #24080d, #170507); border-top: 1px solid rgba(214, 178, 94, .25); }
+.composer { position: relative; padding: 16px 24px 14px; background: linear-gradient(180deg, #24080d, #170507); border-top: 1px solid rgba(214, 178, 94, .25); }
+.table-return {
+  position: absolute; z-index: 3; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%);
+  visibility: hidden; text-decoration: none; white-space: nowrap;
+}
 .composer-row { max-width: 760px; margin: 0 auto; display: flex; align-items: center; gap: 10px; }
 .input-pill {
   flex: 1;
@@ -121,17 +125,19 @@ aside { display: flex; flex-direction: column; min-height: 0; background: var(--
 }
 
 /* ---------- Стол (heads-up: два игрока), стоит в начале ленты над сообщениями ---------- */
-.scene { position: relative; height: 340px; display: flex; align-items: center; justify-content: center;
-         background: radial-gradient(ellipse 55% 70% at 50% 50%, rgba(255, 214, 150, .14) 0%, transparent 100%); }
+.scene {
+  position: relative; height: 340px; display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(ellipse min(480px, 55%) 48% at 44% 48%, rgba(255, 214, 150, .09), transparent);
+}
 .poker-table {
   position: relative; width: min(720px, 90%); height: 260px; border-radius: 130px;
   background: var(--rail-leather);
-  box-shadow: 0 22px 50px rgba(0, 0, 0, .75), inset 0 2px 1px rgba(255, 255, 255, .14), inset 0 -3px 6px rgba(0, 0, 0, .6);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, .58), inset 0 2px 4px rgba(255, 255, 255, .1), inset 0 -3px 8px rgba(0, 0, 0, .42);
 }
 .felt {
   position: absolute; inset: 22px; border-radius: 108px; overflow: hidden;
-  background: url("../img/noise-felt.svg"), var(--felt);
-  box-shadow: 0 0 0 5px var(--wood-1), 0 0 0 7px var(--wood-2), inset 0 0 50px rgba(0, 0, 0, .55), inset 0 0 10px rgba(0, 0, 0, .5);
+  background: url("../img/noise-felt.svg"), radial-gradient(ellipse 95% 105% at 36% 30%, #24764f, #1a6644 45%, #124d34);
+  box-shadow: 0 0 0 5px var(--wood-1), 0 0 0 7px var(--wood-2), inset 0 0 44px rgba(0, 0, 0, .36);
 }
 .bet-line { position: absolute; inset: 22px 34px; border-radius: 96px; border: 2px solid rgba(214, 178, 94, .32); }
 
@@ -202,43 +208,17 @@ aside { display: flex; flex-direction: column; min-height: 0; background: var(--
 .s-hero   { left: 32%; top: 100%; }
 .s-opp    { left: 68%; top: 100%; }
 
-/* ---------- Кнопка «К столу» ---------- */
-.scroll { scroll-behavior: smooth; scroll-timeline: --chat y; }
-.scroll-area { timeline-scope: --chat; }
-.to-table {
-  /* по центру, над строкой ввода с отступом от неё */
-  position: absolute; z-index: 3; left: 50%; top: calc(100% - 34px); transform: translate(-50%, -50%);
-  padding: 8px 18px; border-radius: 999px;
-  background: rgba(18, 26, 22, .94); color: var(--gold);
-  border: 1.5px solid var(--gold); box-shadow: 0 8px 20px rgba(0, 0, 0, .5);
-  font-weight: 700; text-decoration: none; white-space: nowrap;
-}
-.to-table:hover { background: #1d2a22; }
-/* Плашка проявляется, когда лента прокручена ниже стола. Анимация привязана к прокрутке (scroll-driven animations).
-   Браузеры без поддержки просто показывают кнопку всегда. */
-@supports (animation-timeline: scroll()) {
-  .to-table {
-    animation: to-table-show linear both;
-    animation-timeline: --chat;
-    animation-range: 220px 300px;
-  }
-}
-@keyframes to-table-show {
-  from { opacity: 0; visibility: hidden; transform: translate(-50%, -20%); }
-  to   { opacity: 1; visibility: visible; transform: translate(-50%, -50%); }
-}
-
 /* ---------- Телефон ---------- */
-@media (max-width: 760px) {
-  .app { grid-template-columns: 1fr; grid-template-rows: auto 1fr; height: auto; min-height: 100vh; }
+@media (max-width: 980px) {
+  .app { grid-template-columns: 1fr; grid-template-rows: auto minmax(380px, 1fr); }
   aside { border-right: 0; border-bottom: 1px solid var(--line); }
   .history { display: flex; gap: 8px; overflow-x: auto; padding: 4px 16px 12px; }
   .group { display: none; }
   .profile { order: -1; border-top: 0; border-bottom: 1px solid var(--line); }
-  .item { flex: 0 0 220px; background: var(--rail-2); }
+  .item { flex: 0 0 170px; background: var(--rail-2); }
   .new-chat { margin: 12px 16px 8px; }
   .topbar, .composer, .chat { padding-left: 16px; padding-right: 16px; }
-  .scene { height: 270px; }
+  .scene { height: 284px; }
   .poker-table { width: 94%; height: 200px; border-radius: 80px; }
   .felt { inset: 16px; border-radius: 64px; }
   .bet-line { inset: 18px 20px; border-radius: 50px; }
@@ -259,4 +239,257 @@ aside { display: flex; flex-direction: column; min-height: 0; background: var(--
   .bet { bottom: 46px; }
   .dealer-btn { left: calc(68% - 46px); bottom: 14px; }
   .bubble { max-width: 100%; }
+}
+
+[hidden] { display: none !important; }
+button:focus-visible, a:focus-visible, textarea:focus-visible, select:focus-visible, input:focus-visible {
+  outline: 2px solid #f2d58b;
+  outline-offset: 3px;
+}
+.item {
+  width: 100%; margin-bottom: 4px; border: 0; background: transparent;
+  font: inherit; text-align: left; cursor: pointer;
+}
+.chat-panel, .main { min-width: 0; }
+.step-nav {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.control {
+  padding: 5px 9px; color: var(--text); background: var(--rail);
+  border: 1px solid #59675e; border-radius: 7px; font: inherit; font-size: 13px; cursor: pointer;
+}
+.control:hover:not(:disabled) { color: var(--gold); border-color: var(--gold); }
+.control:disabled { opacity: .45; cursor: default; }
+.control.primary { color: var(--rail); border-color: var(--gold); background: var(--gold); }
+.control.primary:hover:not(:disabled) { color: var(--rail); background: #e6c47a; }
+.hand-controls {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center; gap: 8px; width: min(720px, 90%); margin: 0 auto;
+  padding: 0 0 12px;
+}
+.step-nav { grid-column: 2; grid-row: 1; justify-self: center; flex-wrap: nowrap; }
+.message-link { grid-column: 3; grid-row: 1; justify-self: end; white-space: nowrap; }
+.unread { padding: 1px 6px; border-radius: 999px; background: var(--gold); color: var(--rail); }
+.slot.pcard { border: 1px solid #d9d2c2; }
+.input-pill { max-width: 760px; margin: auto; }
+.input-pill textarea { min-width: 0; }
+.disclaimer { margin: 9px 0 0; text-align: center; color: #cabfbc; font-size: 12px; }
+.empty { margin: 10px 8px; color: var(--muted); font-size: 13px; }
+.empty-chat { text-align: center; padding: 36px 0; color: #f2dfae; }
+@media (max-width: 980px) {
+  .profile { order: 0; padding-top: 6px; padding-bottom: 6px; }
+  .brand { display: none; }
+}
+@media (max-width: 480px) {
+  .hand-controls { width: 94%; gap: 5px; }
+  .hand-controls .control { padding: 5px; font-size: 11px; }
+  .hand-controls .unread { padding: 0 3px; }
+  .input-pill button { padding: 0 12px; }
+}
+.item-title { display: block; }
+.hand-view, .table-placeholder[open] { border-top: 1px solid var(--border-gold); }
+.hand-view { scroll-margin-top: 8px; }
+#review-table:focus { outline: none; }
+.message-link { text-decoration: none; }
+.bubble p { margin: 0; }
+.step-state {
+  display: flex;
+  width: fit-content;
+  max-width: min(340px, calc(100% - 32px));
+  height: 42px;
+  margin: 12px auto 4px;
+  background: #1b231e;
+  border: 1px solid var(--border-gold);
+  border-radius: 9px;
+}
+.step-dots {
+  display: flex; align-items: center; gap: 14px;
+  min-width: 0; padding: 6px 12px;
+  overflow-x: auto; overflow-y: hidden;
+  scrollbar-width: thin; scrollbar-color: #99814a #1b231e;
+}
+.step-dot {
+  appearance: none; display: block; flex: 0 0 14px; width: 14px; height: 14px; margin: 0;
+  border: 1px solid transparent; border-radius: 50%; background: #a6a8a5;
+}
+input.step-dot { cursor: pointer; }
+.step-dot.opponent { background: transparent; border-color: #cdbfa1; }
+.step-dot.good { background: #75ce9a; }
+.step-dot.close { background: #e4bf62; }
+.step-dot.miss { background: #ee857e; }
+.step-dot:checked, .step-dot.current {
+  outline: 2px solid #f2dfab; outline-offset: 3px;
+  box-shadow: 0 0 10px #f2dfab80;
+}
+.step-dot:focus-visible { outline: 2px dashed #fff; outline-offset: 4px; }
+.chat-row { position: relative; margin-bottom: 4px; }
+.chat-row .item { margin: 0; min-height: 38px; }
+.chat-row .item-title { min-width: 0; }
+.chat-row-actions {
+  position: absolute; inset: 0 6px 0 auto;
+  display: flex; align-items: center; gap: 2px;
+  opacity: 0; pointer-events: none;
+}
+.chat-action {
+  display: grid; place-items: center; width: 28px; height: 28px; padding: 0;
+  border: 0; border-radius: 6px; background: transparent; color: var(--muted);
+  cursor: pointer;
+}
+.chat-action svg {
+  width: 16px; height: 16px; fill: none; stroke: currentColor;
+  stroke-width: 1.65; stroke-linecap: round; stroke-linejoin: round;
+}
+.chat-row:is(:hover, :focus-within) .item { padding-right: 72px; background: var(--rail-2); }
+.chat-row:is(:hover, :focus-within) .chat-row-actions { opacity: 1; pointer-events: auto; }
+.chat-action:is(:hover, :focus-visible) { background: var(--gold-soft); color: var(--gold); }
+@media (max-width: 980px) {
+  .chat-row { flex: 0 0 200px; }
+}
+@media (hover: none) {
+  .chat-row .item { padding-right: 72px; }
+  .chat-row-actions { opacity: 1; pointer-events: auto; }
+}
+#new-chat { text-decoration: none; }
+.chat-target { display: block; height: 0; }
+.hand-thread, .msg[id] { scroll-margin-top: 12px; }
+.hand-thread {
+  --hand-felt: #203a2c;
+  --hand-edge: #a8884d;
+  margin-top: 16px;
+}
+.hand-thread[open] { filter: drop-shadow(0 8px 15px rgba(0, 0, 0, .28)); }
+.hand-thread:has(.hand-choice:checked) { --hand-edge: var(--gold); }
+.hand-thread[open]:has(.hand-choice:checked),
+.hand-thread:not([open]):has(.hand-choice:checked) > .hand-summary {
+  outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 18px;
+}
+.hand-thread:not([open]):has(.hand-choice:checked) > .hand-summary { border-radius: 24px; }
+.hand-summary {
+  display: flex; align-items: center; justify-content: center; gap: 13px;
+  width: fit-content; max-width: 100%; min-height: 60px; margin-inline: auto;
+  padding: 8px clamp(12px, 3vw, 20px); list-style: none; cursor: pointer;
+  color: #f2dfae;
+  background: url("../img/noise-felt.svg"), linear-gradient(#2b4b37, var(--hand-felt));
+  border: 1px solid var(--hand-edge); border-radius: 24px;
+  box-shadow: inset 0 0 0 3px rgba(11, 24, 17, .4), 0 5px 12px rgba(0, 0, 0, .28);
+}
+.hand-summary::-webkit-details-marker { display: none; }
+.hand-thread:has(.hand-summary:hover) { --hand-edge: var(--gold); }
+.hand-thread[open] .hand-summary {
+  width: 100%; border-bottom: 0; border-radius: 18px 18px 0 0; box-shadow: none;
+}
+.hand-summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+.hand-summary::after {
+  content: ""; width: 7px; height: 7px; flex: 0 0 auto;
+  border: solid currentColor; border-width: 0 1px 1px 0;
+  transform: translateY(-2px) rotate(45deg);
+}
+.hand-thread[open] .hand-summary::after { transform: translateY(2px) rotate(225deg); }
+.hand-cards { display: flex; flex-shrink: 0; padding-inline: 2px; }
+.hand-cards .pcard {
+  width: 27px; height: 37px; font-size: 13px;
+  background: var(--cream); border-color: #d3bd9a;
+}
+.hand-cards .pcard small { font-size: 11px; }
+.hand-cards .pcard:first-child { transform: rotate(-12deg); }
+.hand-cards .pcard + .pcard { margin-left: -8px; transform: rotate(9deg); }
+.hand-summary-info { font: 700 16px/1.1 var(--font-display); }
+.hand-summary-info small { display: block; margin-top: 4px; color: #d6c8ac; font: 400 12px/1.2 system-ui, sans-serif; }
+.hand-messages {
+  padding: 16px clamp(12px, 3vw, 22px) 18px;
+  border: 1px solid var(--hand-edge); border-top: 0; border-radius: 0 0 18px 18px;
+  background: url("../img/noise-felt.svg"), linear-gradient(var(--hand-felt), #141e18);
+}
+.hand-messages .msg:last-child { margin-bottom: 0; }
+.hand-choice { position: absolute; width: 1px; height: 1px; margin: 0; clip-path: inset(50%); }
+.hand-selection { display: block; width: fit-content; margin: 0 auto 14px; padding: 6px 14px; }
+.hand-choice:checked + .hand-selection { display: none; }
+.hand-choice:focus-visible + .hand-selection,
+.hand-thread:has(.hand-choice:checked:focus-visible) > .hand-summary { outline: 2px solid var(--gold); outline-offset: 3px; }
+.empty-content { display: none; }
+.table-placeholder:not([open]) { padding-top: 32px; }
+.table-toggle {
+  display: grid; justify-items: center; gap: 8px; width: fit-content; margin: 0 auto;
+  padding: 5px 12px; border-radius: 10px; list-style: none; cursor: pointer;
+}
+.table-toggle::-webkit-details-marker { display: none; }
+.table-toggle:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+.mini-table {
+  display: grid; place-items: center; position: relative;
+  width: 132px; height: 56px; border: 6px solid var(--wood-1); border-radius: 40px;
+  background: var(--felt); box-shadow: 0 5px 12px #0008, inset 0 0 10px #0006;
+}
+.mini-table::before {
+  content: ""; position: absolute; inset: 5px 10px;
+  border: 1px solid var(--border-gold); border-radius: inherit;
+}
+.mini-board { display: flex; gap: 3px; }
+.mini-board i { width: 8px; height: 11px; border: 1px solid #d5c89a; border-radius: 2px; }
+.table-toggle-label { color: #f2dfae; font-size: 13px; font-weight: 700; }
+.table-toggle:hover .mini-table, .table-toggle:focus-visible .mini-table { border-color: var(--wood-2); }
+.table-placeholder[open] > .table-toggle { display: none; }
+.empty-table .street-name { color: #ddd2ac; }
+.setup-pot, .setup-pot label, .setup-position, .setup-stack {
+  display: flex; align-items: center; gap: 4px; white-space: nowrap;
+}
+.setup-pot { gap: 8px; }
+.setup-pot input, .setup-seat :is(input, select) {
+  min-width: 0; padding: 2px 4px; color: inherit; background: var(--rail);
+  border: 1px solid var(--border-gold); border-radius: 4px; font: inherit;
+}
+.setup-pot input { width: 6ch; }
+.setup-seat { display: grid; gap: 3px; font-size: 11px; }
+.setup-stack { color: #a9bdb1; }
+.setup-stack input { width: 7ch; }
+.setup-action { width: 100%; }
+.setup-action::placeholder { color: #a9bdb1; }
+.card-picker select {
+  appearance: none; width: 100%; min-height: 0; padding: 0; border: 0; border-radius: 3px;
+  background: transparent; color: inherit; font: inherit; text-align: center; cursor: pointer;
+}
+.card-picker select:has(option:is([value="h"], [value="d"]):checked) { color: var(--red); }
+.setup-dealer-hero, .setup-dealer-opp { display: none; }
+.setup-dealer-hero { left: calc(32% + 53px); }
+.hand-setup:has([name="hero_position"] option[value="BTN"]:checked) .setup-dealer-hero,
+.hand-setup:has([name="opponent_position"] option[value="BTN"]:checked) .setup-dealer-opp { display: block; }
+.setup-controls { display: flex; justify-content: center; padding: 12px 16px 18px; }
+.setup-submit { min-width: 132px; min-height: 42px; padding: 8px 20px; font-size: 16px; font-weight: 700; }
+@media (max-width: 980px) {
+  .empty-table .hero-box { bottom: 9px; }
+  .setup-dealer-hero { left: calc(32% + 38px); }
+}
+@media (max-width: 480px) {
+  .setup-pot { gap: 4px; padding-inline: 5px; font-size: 11px; }
+  .setup-pot label { gap: 2px; }
+  .setup-pot input { width: 5ch; }
+  .empty-table .seat { gap: 3px; padding-inline: 3px; }
+  .empty-table .seat :is(.ava, .figure) { width: 24px; height: 24px; }
+}
+@media (max-width: 360px) {
+  .empty-table .street-name { font-size: 9px; }
+}
+.app:not(:has(#empty-chat:target)) .demo-chat-link {
+  background: var(--rail-2); box-shadow: inset 3px 0 0 var(--gold);
+}
+.app:has(#empty-chat:target) .demo-content { display: none; }
+.app:has(#empty-chat:target) .empty-content { display: block; }
+.step-nav { gap: 6px; }
+
+.for-hand-2, .flop-dealt { display: none; }
+.hand-view [data-view] { display: none; }
+.step-nav { --view-display: flex; }
+
+.app:has(#select-hand-1:checked) {
+  & .hand-view:has(#step-1:checked) [data-view="1"],
+  & .hand-view:has(#step-2:checked) [data-view="2"],
+  & .hand-view:has(#step-3:checked) [data-view="3"],
+  & .hand-view:has(#step-4:checked) [data-view="4"] { display: var(--view-display, revert); }
+  & .hand-view:has(#step-3:checked, #step-4:checked) .flop-dealt { display: flex; }
+  & .hand-view:has(#step-3:checked, #step-4:checked) .flop-empty { display: none; }
+}
+.app:has(#select-hand-2:checked) {
+  & .for-hand-1 { display: none; }
+  & .for-hand-2 { display: revert; }
+  & .pcard.for-hand-2, & .step-dots.for-hand-2 { display: flex; }
+  & [data-view="second"] { display: var(--view-display, revert); }
 }

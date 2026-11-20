@@ -57,7 +57,7 @@ form.addEventListener("submit", async (event) => {
   reply.article.classList.add("pending");
   toLatest();
   try {
-    const response = await fetch("/ask", {
+    const response = await fetch("/api/ask", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ question }),
@@ -101,3 +101,14 @@ reset.addEventListener("click", () => {
   scroll.scrollTop = 0;
   input.focus();
 });
+
+const pageUrl = new URL(window.location.href);
+const incomingQuestion = pageUrl.searchParams.get("question");
+if (incomingQuestion) {
+  input.value = incomingQuestion.slice(0, input.maxLength);
+  pageUrl.searchParams.delete("question");
+  history.replaceState(null, "", pageUrl);
+  if (document.referrer && new URL(document.referrer).href.split(/[?#]/)[0] === new URL("prototype.html", location.href).href) {
+    form.requestSubmit();
+  }
+}
