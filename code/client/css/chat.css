@@ -246,6 +246,8 @@ button:focus-visible, a:focus-visible, textarea:focus-visible, select:focus-visi
   outline: 2px solid #f2d58b;
   outline-offset: 3px;
 }
+.input-pill textarea:focus-visible { outline: none; }
+.input-pill:has(textarea:focus-visible) { outline: 2px solid #f2d58b; outline-offset: 2px; }
 .item {
   width: 100%; margin-bottom: 4px; border: 0; background: transparent;
   font: inherit; text-align: left; cursor: pointer;
@@ -441,6 +443,12 @@ input.step-dot { cursor: pointer; }
 .setup-seat { display: grid; gap: 3px; font-size: 11px; }
 .setup-stack { color: #a9bdb1; }
 .setup-stack input { width: 7ch; }
+.empty-table input[type="number"] { appearance: textfield; }
+.empty-table input[type="number"]::-webkit-inner-spin-button,
+.empty-table input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
 .setup-action { width: 100%; }
 .setup-action::placeholder { color: #a9bdb1; }
 .card-picker select {

@@ -2,12 +2,7 @@
   <!-- Плитка ковра 320x320: золотые орнаментные полосы по верхнему и левому краю (при повторе дают сетку),
        розетки симметрично внутри клетки, медальон на пересечении полос. Поверх плитки в CSS лежит лёгкое затемнение. -->
   <defs>
-    <pattern id="b" width="32" height="28" patternUnits="userSpaceOnUse">
-      <rect width="32" height="28" fill="#2a0a10"/>
-      <rect width="32" height="3" fill="#c9a24a"/>
-      <rect y="25" width="32" height="3" fill="#c9a24a"/>
-      <line x1="0" y1="5" x2="32" y2="5" stroke="#8a6a2a" stroke-width=".8"/>
-      <line x1="0" y1="23" x2="32" y2="23" stroke="#8a6a2a" stroke-width=".8"/>
+    <g id="border-mark">
       <circle cx="0" cy="14" r="4.5" fill="none" stroke="#c9a24a" stroke-width="1.4"/>
       <circle cx="32" cy="14" r="4.5" fill="none" stroke="#c9a24a" stroke-width="1.4"/>
       <polygon points="16,7 25,14 16,21 7,14" fill="#c9a24a"/>
@@ -17,8 +12,16 @@
       <circle cx="4.5" cy="20" r=".9" fill="#c9a24a"/>
       <circle cx="27.5" cy="8" r=".9" fill="#c9a24a"/>
       <circle cx="27.5" cy="20" r=".9" fill="#c9a24a"/>
-    </pattern>
-    <pattern id="bv" href="#b" patternTransform="rotate(90)"/>
+    </g>
+    <g id="border">
+      <rect width="320" height="28" fill="#2a0a10"/>
+      <path d="M0 0h320v3H0z M0 25h320v3H0z" fill="#c9a24a"/>
+      <path d="M0 5h320 M0 23h320" stroke="#8a6a2a" stroke-width=".8"/>
+      <use href="#border-mark"/><use href="#border-mark" x="32"/><use href="#border-mark" x="64"/>
+      <use href="#border-mark" x="96"/><use href="#border-mark" x="128"/><use href="#border-mark" x="160"/>
+      <use href="#border-mark" x="192"/><use href="#border-mark" x="224"/><use href="#border-mark" x="256"/>
+      <use href="#border-mark" x="288"/>
+    </g>
     <g id="r" fill="#c9a24a" fill-opacity=".75">
       <circle r="2.4"/>
       <circle cx="5.5" r="1.7"/><circle cx="-5.5" r="1.7"/><circle cy="5.5" r="1.7"/><circle cy="-5.5" r="1.7"/>
@@ -33,8 +36,8 @@
     </g>
   </defs>
 
-  <rect width="320" height="28" fill="url(#b)"/>
-  <rect width="28" height="320" fill="url(#bv)"/>
+  <use href="#border"/>
+  <use href="#border" transform="translate(28 0) rotate(90)"/>
 
   <!-- 1. большие розетки: шахматный порядок на сетке 6x6, образуют ромбы -->
   <use href="#r" x="76.7" y="76.7"/><use href="#r" x="76.7" y="174.0"/><use href="#r" x="76.7" y="271.3"/><use href="#r" x="125.3" y="125.3"/><use href="#r" x="125.3" y="222.7"/><use href="#r" x="174.0" y="76.7"/><use href="#r" x="174.0" y="174.0"/><use href="#r" x="174.0" y="271.3"/>
