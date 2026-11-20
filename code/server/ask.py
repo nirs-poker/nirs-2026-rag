@@ -1,10 +1,10 @@
-"""Запрос к RAG КТ2 из командной строки."""
+"""Запрос к покерному RAG из командной строки."""
 
 import argparse
 import json
 
 from rag import LLM, RAG, ModelError
-from retrieval import BM25, load_corpus
+from retrieval import BM25, load_chat_corpus
 
 
 def main():
@@ -15,7 +15,7 @@ def main():
     question = args.question.strip()
     if not 1 <= len(question) <= 1500:
         parser.error("Введите вопрос длиной от 1 до 1500 символов.")
-    index = BM25(load_corpus())
+    index = BM25(load_chat_corpus())
     try:
         if args.search_only:
             result = [

@@ -12,6 +12,8 @@
 
 [Контрольная точка по RAG](Tech/06-rag-checkpoint.md) содержит объём реализации, корпус, вопросы и критерии приёмки.
 
+Разработчику: [быстрый старт и диагностика](Tech/02-running.md), [контракт локального API](Tech/04-api-and-access.md), [карта кода](Tech/WORKSPACE_MAP.md), [проверки](Tech/05-verification.md).
+
 Полный список документов с назначением и статусом: [document-manifest.json](document-manifest.json).
 
 ## Как связаны документы
