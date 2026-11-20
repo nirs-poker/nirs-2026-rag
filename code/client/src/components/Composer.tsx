@@ -12,7 +12,7 @@ interface Props {
 export function Composer({ draft, status, pending, returnVisible, onDraft, onSubmit, onReturn, onLeaveHand }: Props) {
   return (
     <div className="composer">
-      {returnVisible && <button className="control primary table-return frontend-return" type="button" onClick={onReturn}>К столу</button>}
+      {returnVisible && <button className="control primary table-return" type="button" onClick={onReturn}>К столу</button>}
       <div className="frontend-composer-row">
         <form className="input-pill" onSubmit={event => { event.preventDefault(); onSubmit() }}>
           <textarea name="text" rows={1} required value={draft} onChange={event => onDraft(event.target.value)} placeholder="Задай вопрос по теории или опиши раздачу" aria-label="Сообщение" />
