@@ -21,18 +21,19 @@
 ## Схема БД (план)
 
 ```
-users(id, name, email UNIQUE, password_hash, level, created_at)
-hands(id, user_id -> users.id, title, created_at, updated_at)
-messages(id, hand_id -> hands.id, role: user|assistant, text, created_at)
-answers(message_id -> messages.id, kind: theory|hand, topic, action, size_bb, tags JSON,
-        explanation, example, situation JSON, math JSON, fragment_ids JSON,
-        action_source: solution|math,
-        status: ok|clarify|no_sources|unsupported|off_topic|error)
+users(id, name, email UNIQUE, password_hash, highlight_terms, created_at)
+chats(id, user_id -> users.id, title, last_hand_id, created_at)
+hands(id, chat_id -> chats.id, initial_situation, created_at)
+moves(id, hand_id -> hands.id, turn_index, actor, actual_action, size_bb,
+      origin, situation_after, exact_solution_id, grade)
+messages(id, chat_id -> chats.id, hand_id nullable, role, text, created_at, read_at)
+answers(message_id -> messages.id, kind, topic, action, size_bb, tags,
+        explanation, example, situation, math, fragment_ids, action_source, status)
 ```
 
-- Пароли хранятся только в виде хеша (`R-010`).
-- Все запросы к `hands` и `messages` фильтруются по `user_id` текущего пользователя (`R-011`).
-- `answers.fragment_ids` позволяет проверить, на чём основан ответ (`REQ-007`).
+Чат принадлежит пользователю. Его сообщения могут предшествовать первой раздаче. Ссылка сообщения на раздачу и последняя выбранная раздача должны принадлежать тому же чату. При удалении чата удаляются его раздачи, ходы и переписка. Пароли хранятся в виде хешей.
+
+В пределах раздачи ход имеет уникальный порядковый номер. Исходная ситуация и состояния после ходов дают стол для каждого шага. Для хода сохраняются автор и происхождение (описан пользователем или предложен приложением). Рекомендация хранится в ответе отдельно от фактического хода. Оценка относится только к ходу пользователя. Непрочитанные ответы считаются по сообщениям приложения с пустым `read_at` в выбранной раздаче.
 
 ## Фрагменты корпуса
 
