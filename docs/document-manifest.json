@@ -1,6 +1,6 @@
 {
   "project": "Покерный тренер (НИРС 2026)",
-  "updated": "2026-10-10",
+  "updated": "2026-11-20",
   "statuses": {
     "actual": "актуален",
     "draft": "первая версия, описывает план",
@@ -28,6 +28,7 @@
     { "path": "docs/Tech/03-data.md", "section": "Tech", "purpose": "Хранение, схема БД, восстановление, формат benchmark", "status": "draft" },
     { "path": "docs/Tech/04-api-and-access.md", "section": "Tech", "purpose": "API сервера и правила доступа", "status": "draft" },
     { "path": "docs/Tech/05-verification.md", "section": "Tech", "purpose": "Ручные проверки макета, автотесты, benchmark и метрики", "status": "draft" },
+    { "path": "docs/Tech/06-rag-checkpoint.md", "section": "Tech", "purpose": "Спецификация КТ по RAG, корпус, benchmark и приёмка", "status": "actual" },
     { "path": "docs/Tech/WORKSPACE_MAP.md", "section": "Tech", "purpose": "Карта кода: сейчас и план", "status": "actual" },
 
     { "path": "docs/Service/README.md", "section": "Service", "purpose": "Индекс раздела", "status": "actual" },

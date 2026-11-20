@@ -21,6 +21,11 @@ code/
       OFL.txt                  - лицензия шрифта
   server/                      - пусто, появится сервер
   tests/                       - пусто, появятся тесты и benchmark
+data/
+  theory/                      - шесть исходных документов Word для КТ по RAG
+  pokerbench/                  - набор решений солвера PokerBench, только CSV
+    preflop/                   - обучающая (63 200 строк) и тестовая (1 000) части
+    postflop/                  - обучающая (500 000 строк) и тестовая (10 000) части
 ```
 
 ## План
@@ -37,14 +42,16 @@ code/
     poker_math.py              - шансы банка, ауты
     query.py                   - построение запроса для BM25
     retrieval.py               - индекс BM25 и поиск
+    solutions.py               - сборка фрагментов-решений из data/pokerbench
+    action.py                  - рекомендация по точному или похожему решению, оценка фактического хода
     llm.py                     - клиент LLM
     prompts.py                 - шаблоны промптов
-    corpus/                    - документы корпуса (правила, глоссарий, стратегия) + SOURCES.md
   tests/
     test_*.py                  - автотесты
     benchmark/
       theory.jsonl             - вопросы по теории
       hands.jsonl              - набор раздач
+      (тест PokerBench читается из data/pokerbench)
       run.py                   - прогон и расчёт метрик
       results/                 - результаты прогонов
 ```
