@@ -18,7 +18,9 @@ from web import create_server, load_environment
 class WebTests(unittest.TestCase):
     def setUp(self):
         self.rag = Mock()
-        self.server = create_server(0, self.rag)
+        self.frontend = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        with patch("web.FRONTEND", self.frontend):
+            self.server = create_server(0, self.rag)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
 
@@ -37,9 +39,14 @@ class WebTests(unittest.TestCase):
             connection.close()
 
     def test_frontend_and_health(self):
+        self.assertEqual(self.request("GET", "/")[0], 404)
+        frontend = b'<div id="root"></div><script src="./assets/chat.js"></script>'
+        (self.frontend / "frontend.html").write_bytes(frontend)
+        (self.frontend / "assets").mkdir()
+        (self.frontend / "assets" / "chat.js").write_bytes(b"// bundled frontend")
         status, body = self.request("GET", "/")
-        self.assertEqual(status, 200)
-        self.assertIn(b"trainer.js", body)
+        self.assertEqual((status, body), (200, frontend))
+        self.assertEqual(self.request("GET", "/assets/chat.js"), (200, b"// bundled frontend"))
         status, body = self.request("GET", "/api/health")
         self.assertEqual((status, json.loads(body)), (200, {"status": "ok"}))
         self.rag.ask.assert_not_called()

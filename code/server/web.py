@@ -11,7 +11,9 @@ from rag import LLM, RAG, ModelError
 from retrieval import BM25, load_chat_corpus
 
 CLIENT = Path(__file__).resolve().parents[1] / "client"
+FRONTEND = CLIENT / "dist"
 ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_PORT = json.loads((CLIENT.parent / "ports.json").read_text(encoding="utf-8"))["backend"]
 
 
 def load_environment(path=ROOT / ".env"):
@@ -30,14 +32,19 @@ def load_environment(path=ROOT / ".env"):
         os.environ.setdefault(name, value)
 
 
-def create_server(port=8000, rag=None):
-    handler = partial(ChatHandler, directory=str(CLIENT))
+def create_server(port=DEFAULT_PORT, rag=None):
+    handler = partial(ChatHandler, directory=str(FRONTEND))
     server = ThreadingHTTPServer(("127.0.0.1", port), handler)
     server.rag = rag if rag is not None else RAG(BM25(load_chat_corpus()), LLM.from_env())
     return server
 
 
 class ChatHandler(SimpleHTTPRequestHandler):
+    def translate_path(self, path):
+        if path.partition("?")[0] == "/":
+            path = "/frontend.html"
+        return super().translate_path(path)
+
     def do_GET(self):
         if self.path == "/api/health":
             self.json_response(200, {"status": "ok"})
@@ -87,7 +94,7 @@ class ChatHandler(SimpleHTTPRequestHandler):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     args = parser.parse_args()
     load_environment()
     with create_server(args.port) as server:

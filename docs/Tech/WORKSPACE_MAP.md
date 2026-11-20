@@ -4,17 +4,16 @@
 
 ```
 code/
-  client/                      - рабочий чат и статичный макет
-    index.html                 - рабочий RAG-чат теории
-    trainer.js                 - отправка вопросов, ответы и источники
-    login.html                 - вход
-    register.html              - регистрация
-    prototype.html             - чат: история, стол, лента, поле ввода
+  ports.json                   - порты Vite и Python-сервера
+  client/                      - чат на React и TypeScript
+    frontend.html              - точка входа Vite для чата на TypeScript
+    src/                       - React-компоненты, страницы и состояние чатов
+      api/                     - клиент и типы POST /api/ask
+      slices/                  - Redux-состояние чатов и отправки вопросов
     css/
       common.css               - общее: шрифт заголовков, цвета, переменные стола, полосы прокрутки
       chat.css                 - экран чата
       auth.css                 - экраны входа и регистрации
-      trainer.css              - рабочий чат теории
     img/
       carpet.svg               - плитка ковра (полосы, розетки, крестики, точки)
       noise.svg, noise-felt.svg - текстуры ворса и сукна
