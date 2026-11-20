@@ -1,4 +1,4 @@
-"""Обратный индекс и ранжирование BM25 для корпуса КТ2."""
+"""Обратный индекс и ранжирование BM25 для покерной теории."""
 
 import json
 import math
@@ -8,10 +8,12 @@ from dataclasses import dataclass
 from pathlib import Path
 
 CORPUS = Path(__file__).with_name("corpus") / "documents.jsonl"
+EXTRA_CORPUS = CORPUS.parent / "additional"
 TOP_K = 5
 WORD = re.compile(r"\d+(?:[.,]\d+)?\s*bb|[a-zа-я0-9]+(?:[-_][a-zа-я0-9]+)*")
 STOP = set("а и но или в во на с со по за к от до из для у о об при ли же что это такой такое какие какой как кто сколько когда где чем если после перед почему что-то я мы вы он она".split())
 FORMS = {
+    "комбинации": "комбинация", "комбинаций": "комбинация", "комбинацию": "комбинация",
     "блайнда": "блайнд", "блайндов": "блайнд", "баттоне": "баттон", "баттона": "баттон",
     "ставки": "ставка", "ставку": "ставка", "ставок": "ставка", "ставкой": "ставка",
     "карты": "карта", "карт": "карта", "карту": "карта", "картой": "карта",
@@ -73,6 +75,16 @@ def load_corpus(path=CORPUS):
     return documents
 
 
+def load_chat_corpus():
+    """Загрузить теорию для чата, включая дополнения к корпусу КТ2."""
+    documents = load_corpus()
+    for path in sorted(EXTRA_CORPUS.glob("*.jsonl")):
+        documents.extend(load_corpus(path))
+    if len({doc.id for doc in documents}) != len(documents):
+        raise ValueError("ID документов должны быть уникальны во всех файлах корпуса.")
+    return documents
+
+
 class BM25:
     def __init__(self, documents, k1=1.2, b=0.75):
         self.documents = {doc.id: doc for doc in documents}
@@ -81,7 +93,10 @@ class BM25:
         self.k1 = k1
         self.b = b
         for doc in self.documents.values():
-            words = tokens(f"{doc.title} {doc.text}")
+            title = doc.title
+            if title == "Старшинство рук":
+                title += " — какие покерные комбинации существуют, их виды и порядок"
+            words = tokens(f"{title} {doc.text}")
             self.lengths[doc.id] = len(words)
             for word, frequency in Counter(words).items():
                 self.index[word][doc.id] = frequency

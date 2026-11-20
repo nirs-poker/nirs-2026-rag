@@ -76,7 +76,7 @@ class RagTests(unittest.TestCase):
         payload = json.loads(requests[0].data)
         self.assertEqual(requests[0].get_header("User-agent"), "nirs-poker-trainer/1.0")
         self.assertEqual(payload["reasoning_effort"], "low")
-        self.assertEqual(payload["max_tokens"], 700)
+        self.assertEqual(payload["max_tokens"], 2048)
 
     def test_only_ranked_text_is_sent_and_cited(self):
         class Model:

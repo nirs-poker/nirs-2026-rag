@@ -8,7 +8,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from rag import LLM, RAG, ModelError
-from retrieval import BM25, load_corpus
+from retrieval import BM25, load_chat_corpus
 
 CLIENT = Path(__file__).resolve().parents[1] / "client"
 ROOT = Path(__file__).resolve().parents[2]
@@ -33,7 +33,7 @@ def load_environment(path=ROOT / ".env"):
 def create_server(port=8000, rag=None):
     handler = partial(ChatHandler, directory=str(CLIENT))
     server = ThreadingHTTPServer(("127.0.0.1", port), handler)
-    server.rag = rag if rag is not None else RAG(BM25(load_corpus()), LLM.from_env())
+    server.rag = rag if rag is not None else RAG(BM25(load_chat_corpus()), LLM.from_env())
     return server
 
 
@@ -79,6 +79,7 @@ class ChatHandler(SimpleHTTPRequestHandler):
         try:
             result = self.server.rag.ask(question.strip())
         except ModelError as error:
+            self.log_error("LLM: %s", error)
             self.json_response(502, {"status": "error", "error": str(error)})
             return
         self.json_response(200, result)
