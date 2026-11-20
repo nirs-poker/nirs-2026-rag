@@ -6,12 +6,12 @@
 
 | Данные | Где | Восстановление |
 |---|---|---|
-| Пользователи | БД (SQLite, Q-003) | Резервная копия файла БД |
+| Пользователи | PostgreSQL для продуктовой версии (Q-003) | Резервная копия БД |
 | Раздачи и сообщения | БД | Резервная копия файла БД |
 | Набор PokerBench (решения солвера, CSV) | `data/pokerbench/preflop/`, `data/pokerbench/postflop/` | Из git или с Hugging Face: `RZ412/PokerBench` |
-| Корпус (исходные документы) | `code/server/corpus/` в репозитории | Из git |
+| Корпус теории для КТ (исходники) | `data/theory/*.doc` | Из git. Разделы и ID перечислены в [спецификации КТ](06-rag-checkpoint.md) |
 | Фрагменты-решения | Собираются скриптом из `data/pokerbench/` | Пересобрать из CSV |
-| Источники корпуса | `code/server/corpus/SOURCES.md` | Из git |
+| Источники корпуса | Разделы «Источники» в исходниках `data/theory/` | Из git |
 | BM25-индекс | Строится из корпуса при запуске или командой | Пересобрать из корпуса |
 | Benchmark | `code/tests/benchmark/theory.jsonl`, `hands.jsonl` | Из git |
 | Результаты прогонов | `code/tests/benchmark/results/` + итог в `docs/Service/verification.md` | Из git |
@@ -23,7 +23,7 @@
 ```
 users(id, name, email UNIQUE, password_hash, highlight_terms, created_at)
 chats(id, user_id -> users.id, title, last_hand_id, created_at)
-hands(id, chat_id -> chats.id, initial_situation, created_at)
+hands(id, chat_id -> chats.id, mode: analysis|training, initial_situation, villain_cards, created_at)
 moves(id, hand_id -> hands.id, turn_index, actor, actual_action, size_bb,
       origin, situation_after, exact_solution_id, grade)
 messages(id, chat_id -> chats.id, hand_id nullable, role, text, created_at, read_at)
