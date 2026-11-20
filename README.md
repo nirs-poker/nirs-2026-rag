@@ -29,11 +29,19 @@
 
 ## Текущее состояние
 
-Контрольная точка 1: продуктовая документация (SDD) и макет интерфейса.
+Для КТ2 реализован поиск по 30 разделам из шести Word-файлов и подготовлен прогон по 15 вопросам. Сквозная проверка ответов ожидает выбора провайдера LLM. Подробнее в [STATUS.md](STATUS.md).
 
-- Готово: документы в `docs/Product/`, макет основного сценария в `code/client/` (вход, регистрация, чат со столом).
-- Макет статичный: сервера, поиска и LLM пока нет.
-- Подробно и следующий шаг: [STATUS.md](STATUS.md).
+## Поиск и проверка КТ2
+
+Достаточно Python 3.11+. Из корня репозитория в Windows:
+
+```powershell
+python -X utf8 code/server/ask.py --search-only "Кто первым действует на префлопе за столом 6-max?"
+python -X utf8 code/tests/benchmark/run.py --search-only --output code/tests/benchmark/results/search.json
+python -X utf8 -m unittest discover -s code/tests -v
+```
+
+JSONL уже подготовлен. Для повторной выгрузки из исходных `.doc` нужен Microsoft Word. Команда `python -X utf8 code/server/prepare_corpus.py` пересобирает корпус и вопросы по таблицам спецификации. Параметры BM25, результаты и команда сквозного прогона приведены в [отчёте бенчмарка](code/tests/benchmark/README.md).
 
 ## Запуск макета
 
@@ -74,8 +82,8 @@ docs/
   Service/             - решения, источники требований, протокол проверок
 code/
   client/              - фронт (сейчас статичный макет)
-  server/              - сервер, поиск и RAG (появится позже)
-  tests/               - тесты и benchmark (появятся позже)
+  server/              - корпус, собственный BM25 и RAG по теории
+  tests/               - тесты и benchmark КТ2
 data/
   theory/              - шесть исходных документов для КТ по RAG
   pokerbench/          - набор решений солвера PokerBench (CSV): preflop/ и postflop/
