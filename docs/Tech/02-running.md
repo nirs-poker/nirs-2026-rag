@@ -98,8 +98,46 @@ python -X utf8 code/tests/benchmark/run.py --search-only --output code/tests/ben
 | Health работает, ответ не приходит | Health не проверяет Groq. Проверьте ключ, сеть и сообщение ошибки чата; таймаут модели — 150 секунд |
 | `.env` изменён, настройки прежние | Перезапустите сервер и удалите старые переменные из окружения; в zsh/bash: `unset GROQ_API_KEY LLM_API_KEY LLM_BASE_URL LLM_MODEL` |
 
-Сервер слушает только `127.0.0.1`. Это локальный прототип без авторизации; публичный хостинг в текущий запуск не входит.
+Локальный сервер слушает только `127.0.0.1`. Для публикации на REG.RU используется отдельное WSGI-приложение под Passenger.
 
 ## Запуск готовой сборки через Python
 
 В `code/client` выполните `npm ci` и `npm run build`. Запустите Python-сервер и откройте [чат](http://127.0.0.1:8001/). Python раздаёт сборку из `code/client/dist/` и обслуживает API с того же адреса. Для этого способа Vite в отдельном терминале не нужен.
+
+## Публикация на REG.RU
+
+Workflow `.github/workflows/deploy-regru.yml` выполняет Python-тесты и сборку React на Pull Request в `main`. После push в `main` (например, слияния проверенного PR) он собирает тот же комплект файлов, синхронизирует его через SSH+rsync, создаёт `.restart-app` для Passenger и проверяет `https://nirs.ukidoshi.store/api/health`. Ручной запуск доступен через `workflow_dispatch`, только когда выбран `main`.
+
+Хостинг должен поддерживать Python 3.11+, CGI/Python и Passenger через ispmanager, домен должен быть привязан к этой услуге, а из приложения должен быть доступен исходящий HTTPS к Groq. В панели управления для домена включите CGI/Python и выберите Python 3.11 или новее. Создайте сайт как отдельный домен, не автоподдомен. REG.RU описывает запуск Python/Flask через `passenger_wsgi.py` и перезапуск созданием `.restart-app`; проект использует собственный WSGI без внешних Python-библиотек ([инструкция REG.RU по Flask](https://help.reg.ru/support/hosting/php-asp-net-i-skripty/kak-ustanovit-flask-na-hosting)).
+
+### Первичная настройка хостинга
+
+1. В ispmanager проверьте document root домена `nirs.ukidoshi.store`, включите Python/CGI и выберите поддерживаемую версию не ниже 3.11.
+2. Подключитесь по SSH и проверьте доступные интерпретаторы командой `ls -la /opt/python/*/bin/python`. Создайте `~/poker-trainer-venv` командой `/opt/python/python-3.11.X/bin/python -m venv ~/poker-trainer-venv`, заменив версию на установленную 3.11 или новее. Passenger-вход использует этот интерпретатор, если он существует. Внешние Python-пакеты проекту не нужны.
+3. Включите HTTPS для домена в панели REG.RU. Убедитесь, что `https://nirs.ukidoshi.store` открывается.
+4. Убедитесь, что SSH-доступ включён на тарифе (у REG.RU он отсутствует на «Хост-Лайт»). Добавьте публичный ключ отдельной пары для GitHub Actions в панели/SSH-настройках хостинга. Не используйте пароль аккаунта как секрет workflow. В документации REG.RU SSH доступен на виртуальном хостинге кроме «Хост-Лайт»; подключение выполняется под основным логином услуги ([SSH на виртуальном хостинге](https://help.reg.ru/support/hosting/dostupy-i-podklyucheniye-panel-upravleniya-ftp-ssh/rabota-po-ssh-na-virtualnom-hostinge)).
+5. Создайте `.env` в корне сайта на хостинге с `GROQ_API_KEY`, `LLM_BASE_URL` и `LLM_MODEL`. Workflow не переносит и не удаляет `.env`. Установите права на `.env` так, чтобы его мог читать пользователь хостинга, но не посторонние. Объедините правила из репозитория `.htaccess` с существующим файлом, чтобы HTTP-запросы не могли читать `.env` или `passenger_wsgi.py`; не заменяйте файл целиком, если в нём есть другие настройки. Файл `code/.htaccess` в комплекте деплоя запрещает HTTP-доступ к исходникам внутри `code/`.
+6. Проверьте, что document root предназначен для этого приложения: rsync обновляет файлы сайта и удаляет старые файлы проекта после загрузки, сохраняя `.env`, `.htaccess`, `.htpasswd`, `.well-known/`, `uploads/`, `storage/`, `api/` и `cgi-bin/`.
+
+### Настройка GitHub
+
+В репозитории откройте **Settings → Environments**, создайте окружение `production` и ограничьте разрешённую ветку `main`. Добавьте в него secrets:
+
+| Secret | Значение |
+|---|---|
+| `VPS_HOST` | SSH-адрес хостинга из раздела «Доступы» REG.RU |
+| `VPS_USERNAME` | основной SSH-логин хостинга вида `u1234567` |
+| `VPS_SSH_KEY` | приватная часть SSH-ключа, публичная часть которого добавлена на хостинг |
+| `VPS_KNOWN_HOSTS` | заранее проверенная строка ключа SSH-хоста для `known_hosts` |
+| `VPS_TARGET_PATH` | абсолютный document root домена `nirs.ukidoshi.store`, например путь из панели «Сайты» |
+
+Добавьте environment variables:
+
+| Variable | Значение |
+|---|---|
+| `VPS_PORT` | порт SSH; если пропустить, используется `22` |
+| `DEPLOY_URL` | URL health-check; по умолчанию `https://nirs.ukidoshi.store` |
+
+`VPS_KNOWN_HOSTS` хранит публичный ключ сервера, а не секретный ключ пользователя. Получите его через `ssh-keyscan` и сравните fingerprint с данными REG.RU/поддержки перед добавлением. Настройте ограничение на окружение `production`, чтобы секреты деплоя не использовались из PR или другой ветки. Ключ Groq хранится только в `.env` на хостинге и не передаётся в GitHub Actions.
+
+На `push` в `main` запустится `CI and deploy to REG.RU`. Успех состоит из двух jobs: `Verify and package`, затем `Deploy production`. Последний шаг делает запрос на `/api/health`. Отдельно отправьте в чат простой вопрос и проверьте ответ с источниками: health проверяет только доступность приложения, не Groq. Также проверьте, что запросы к `/.env` и `/code/server/rag.py` запрещены хостингом.
