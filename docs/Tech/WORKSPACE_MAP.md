@@ -28,6 +28,8 @@ code/
     theory_answers.py           - узкие ответы по источникам: слои банков, формат и минимум префлоп-рейза
     ask.py                      - запуск вопроса из командной строки
     web.py                      - локальный веб-сервер, `.env`, `POST /api/ask`, `GET /api/health`
+    wsgi.py                     - WSGI-приложение Passenger, те же API-маршруты и сборка клиента
+    .htaccess                   - запрет HTTP-доступа к исходникам в `code/`
     corpus/documents.jsonl      - подготовленные фрагменты корпуса
     corpus/clarifications.json  - воспроизводимые уточнения конспектов D08/D30
   tests/                        - автотесты и benchmark КТ2
@@ -42,6 +44,8 @@ data/
     preflop/                   - обучающая (63 200 строк) и тестовая (1 000) части
     postflop/                  - обучающая (500 000 строк) и тестовая (10 000) части
 ```
+
+Корень репозитория: `passenger_wsgi.py` — точка входа REG.RU Passenger; `.github/workflows/deploy-regru.yml` — проверки PR и автоматический деплой `main`; корневой `.htaccess` содержит правило защиты `.env` и `passenger_wsgi.py` и при первом развёртывании должен быть объединён с конфигурацией сайта.
 
 ## План
 

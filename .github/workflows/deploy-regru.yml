@@ -1,0 +1,131 @@
+name: CI and deploy to REG.RU
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify and package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: Run Python tests
+        run: python -X utf8 -m unittest discover -s code/tests -v
+
+      - name: Build frontend
+        working-directory: code/client
+        run: |
+          npm ci
+          npm run build
+
+      - name: Package hosting files
+        run: |
+          mkdir -p build/package/code
+          cp -R code/server build/package/code/server
+          cp code/.htaccess build/package/code/.htaccess
+          mkdir -p build/package/code/client
+          cp -R code/client/dist build/package/code/client/dist
+          cp passenger_wsgi.py .htaccess build/package/
+          find build/package -type d -name __pycache__ -prune -exec rm -rf {} +
+          tar -czf build/deploy.tar.gz -C build/package .
+
+      - name: Upload deployment package
+        uses: actions/upload-artifact@v7
+        with:
+          name: reg-ru-deployment
+          path: build/deploy.tar.gz
+          if-no-files-found: error
+          retention-days: 3
+
+  deploy:
+    name: Deploy production
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Download deployment package
+        uses: actions/download-artifact@v8
+        with:
+          name: reg-ru-deployment
+
+      - name: Unpack deployment package
+        run: mkdir -p build/package && tar -xzf deploy.tar.gz -C build/package
+
+      - name: Configure SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          test -n "$DEPLOY_SSH_KEY"
+          test -n "$DEPLOY_KNOWN_HOSTS"
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$HOME/.ssh/deploy_key"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/deploy_key" "$HOME/.ssh/known_hosts"
+          ssh-keygen -y -f "$HOME/.ssh/deploy_key" >/dev/null
+
+      - name: Sync files to hosting with rsync
+        env:
+          DEPLOY_HOST: ${{ secrets.VPS_HOST }}
+          DEPLOY_PORT: ${{ vars.VPS_PORT || '22' }}
+          DEPLOY_USER: ${{ secrets.VPS_USERNAME }}
+          DEPLOY_PATH: ${{ secrets.VPS_TARGET_PATH }}
+          DEPLOY_URL: ${{ vars.DEPLOY_URL || 'https://nirs.ukidoshi.store' }}
+        run: |
+          test -n "$DEPLOY_HOST"
+          test -n "$DEPLOY_PORT"
+          test -n "$DEPLOY_USER"
+          test -n "$DEPLOY_PATH"
+          test -n "$DEPLOY_URL"
+          if ! [[ "$DEPLOY_PATH" =~ ^/[A-Za-z0-9_./-]+$ ]] || [[ "$DEPLOY_PATH" == "/" ]]; then
+            echo "DEPLOY_PATH must be an absolute path without spaces or shell characters."
+            exit 1
+          fi
+          if ! [[ "$DEPLOY_PORT" =~ ^[0-9]{1,5}$ ]] || (( DEPLOY_PORT < 1 || DEPLOY_PORT > 65535 )); then
+            echo "DEPLOY_PORT must be a valid TCP port."
+            exit 1
+          fi
+          target="$DEPLOY_USER@$DEPLOY_HOST"
+          ssh_options="ssh -p $DEPLOY_PORT -i $HOME/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts"
+          rsync --archive --compress --delete-after \
+            --exclude='/.env' \
+            --exclude='/.htaccess' \
+            --exclude='/.htpasswd' \
+            --exclude='/.well-known/' \
+            --exclude='/uploads/' \
+            --exclude='/storage/' \
+            --exclude='/api/' \
+            --exclude='/cgi-bin/' \
+            -e "$ssh_options" \
+            build/package/ "$target:$DEPLOY_PATH/"
+          ssh -i "$HOME/.ssh/deploy_key" -p "$DEPLOY_PORT" \
+            -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            "$target" "touch '$DEPLOY_PATH/.restart-app'"
+          curl --fail --show-error --silent --location \
+            --retry 12 --retry-delay 5 --retry-all-errors \
+            "$DEPLOY_URL/api/health"
