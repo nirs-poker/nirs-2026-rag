@@ -24,7 +24,8 @@ code/
   server/                      - прототип RAG по теории
     prepare_corpus.py           - подготовка JSONL корпуса из Word-исходников
     retrieval.py                - собственный индекс BM25 и поиск
-    rag.py                      - запрос к Groq, проверка структуры и ссылок
+    rag.py                      - выбор клиента модели, проверка структуры и ссылок
+    gigachat_client.py          - GigaChat v1, OAuth, кэш токена и TLS
     theory_answers.py           - узкие ответы по источникам: слои банков, формат и минимум префлоп-рейза
     ask.py                      - запуск вопроса из командной строки
     web.py                      - локальный веб-сервер, `.env`, `POST /api/ask`, `GET /api/health`

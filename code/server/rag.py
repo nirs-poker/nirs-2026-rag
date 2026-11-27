@@ -98,11 +98,23 @@ class LLM:
 
     @classmethod
     def from_env(cls):
+        provider = os.getenv("LLM_PROVIDER", "gigachat").lower()
+        if provider == "gigachat":
+            from gigachat_client import GigaChatLLM
+            return GigaChatLLM.from_env()
+        if provider != "groq":
+            raise ModelError("Неизвестный LLM_PROVIDER. Используйте gigachat или groq.")
         return cls(
             os.getenv("LLM_BASE_URL", "https://api.groq.com/openai/v1").rstrip("/"),
             os.getenv("LLM_MODEL", "openai/gpt-oss-20b"),
             os.getenv("GROQ_API_KEY") or os.getenv("LLM_API_KEY", ""),
         )
+
+    def open_request(self, request):
+        return urlopen(request, timeout=150)
+
+    def response_format(self):
+        return RESPONSE_FORMAT
 
     def answer(self, question, documents):
         messages = [
@@ -114,7 +126,7 @@ class LLM:
         payload = {
             "model": self.model, "messages": messages, "temperature": 0,
             "max_tokens": 450,
-            "response_format": RESPONSE_FORMAT,
+            "response_format": self.response_format(),
         }
         if self.base_url == "https://api.groq.com/openai/v1" and self.model in (
             "openai/gpt-oss-20b", "openai/gpt-oss-120b",
@@ -129,7 +141,7 @@ class LLM:
         except ValueError as error:
             raise ModelError("Некорректный адрес API. Проверьте LLM_BASE_URL.") from error
         try:
-            with urlopen(request, timeout=150) as response:
+            with self.open_request(request) as response:
                 result = json.load(response)
             choice = result["choices"][0]
             if choice.get("finish_reason") == "length":

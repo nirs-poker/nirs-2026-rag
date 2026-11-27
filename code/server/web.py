@@ -20,7 +20,8 @@ def load_environment(path=ROOT / ".env"):
     """Читает только настройки LLM, не выполняя содержимое файла как shell-код."""
     if not path.exists():
         return
-    allowed = {"GROQ_API_KEY", "LLM_API_KEY", "LLM_BASE_URL", "LLM_MODEL"}
+    allowed = {"GROQ_API_KEY", "LLM_API_KEY", "LLM_BASE_URL", "LLM_MODEL",
+               "LLM_PROVIDER", "GIGACHAT_CREDENTIALS", "GIGACHAT_SCOPE", "GIGACHAT_CA_BUNDLE"}
     for line in path.read_text(encoding="utf-8").splitlines():
         name, separator, value = line.strip().partition("=")
         name = name.strip()

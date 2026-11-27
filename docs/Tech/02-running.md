@@ -5,7 +5,7 @@
 Для сервера нужен Python 3.11+. Внешние Python-пакеты и база данных не требуются. Для сборки и запуска интерфейса в Vite нужен Node.js. Команды выполняются из корня репозитория. Подготовленный корпус уже находится в Git.
 
 1. При первой настройке создайте `.env` из `.env.example`: macOS/Linux — `cp .env.example .env`, Windows PowerShell — `Copy-Item .env.example .env`. Не перезаписывайте уже настроенный `.env`.
-2. Откройте `.env` в редакторе и задайте свой `GROQ_API_KEY`. Остальные значения оставьте как в шаблоне. Ключ не отправляется в чат и не коммитится; `.env` исключён из Git.
+2. Откройте `.env` в редакторе и задайте свой `GIGACHAT_CREDENTIALS`. Остальные значения оставьте как в шаблоне. Ключ не отправляется в чат и не коммитится; `.env` исключён из Git.
 3. Запустите `python -X utf8 code/server/web.py`.
 4. Проверьте `http://127.0.0.1:8001/api/health` и запустите фронтенд по инструкции ниже. Остановка — Ctrl+C. Порт для отдельного запуска сервера можно переопределить через `--port`.
 
@@ -15,7 +15,7 @@
 
 ## Что доступно
 
-`web.py` предоставляет `POST /api/ask` и `GET /api/health`. Первый маршрут выполняет поиск BM25 и при необходимости обращается к Groq. Второй проверяет доступность сервера без вызова модели. Индекс создаётся один раз при старте, ключ остаётся на сервере. Контракт описан в [API](04-api-and-access.md).
+`web.py` предоставляет `POST /api/ask` и `GET /api/health`. Первый маршрут выполняет поиск BM25 и при необходимости обращается к GigaChat. Второй проверяет доступность сервера без вызова модели. Индекс создаётся один раз при старте, ключ остаётся на сервере. Контракт описан в [API](04-api-and-access.md).
 
 ## Фронтенд на TypeScript
 
@@ -33,7 +33,7 @@ npm run dev
 
 ### Подключение к API теории
 
-Порты задаются в [`code/ports.json`](../../code/ports.json). Vite проксирует `/api` на `http://127.0.0.1:8001`. Если сервер запущен на другом порту, задайте `API_TARGET` при старте Vite. «Отправить» обращается к `POST /api/ask`. Чтобы проверить связку, задайте вопрос «Чем сет отличается от трипса?» и раскройте «Источники» в ответе. Ключ Groq читает Python-сервер.
+Порты задаются в [`code/ports.json`](../../code/ports.json). Vite проксирует `/api` на `http://127.0.0.1:8001`. Если сервер запущен на другом порту, задайте `API_TARGET` при старте Vite. «Отправить» обращается к `POST /api/ask`. Чтобы проверить связку, задайте вопрос «Чем сет отличается от трипса?» и раскройте «Источники» в ответе. Ключ авторизации GigaChat читает Python-сервер.
 
 ## Настройки прототипа
 
@@ -64,7 +64,7 @@ Windows PowerShell (чтение простого `.env` без выполнен
 
 ```powershell
 Get-Content .env | ForEach-Object {
-    if ($_ -match '^\s*(GROQ_API_KEY|LLM_API_KEY|LLM_BASE_URL|LLM_MODEL)\s*=(.*)$') {
+    if ($_ -match '^\s*(GROQ_API_KEY|LLM_API_KEY|LLM_BASE_URL|LLM_MODEL|LLM_PROVIDER|GIGACHAT_CREDENTIALS|GIGACHAT_SCOPE|GIGACHAT_CA_BUNDLE)\s*=(.*)$') {
         $name = $Matches[1]
         $value = $Matches[2].Trim().Trim('"').Trim("'")
         [Environment]::SetEnvironmentVariable($name, $value, 'Process')
@@ -108,7 +108,7 @@ python -X utf8 code/tests/benchmark/run.py --search-only --output code/tests/ben
 
 Workflow `.github/workflows/deploy-regru.yml` выполняет Python-тесты и сборку React на Pull Request в `main`. После push в `main` (например, слияния проверенного PR) он собирает тот же комплект файлов, синхронизирует его через SSH+rsync, создаёт `.restart-app` для Passenger и проверяет `https://nirs.ukidoshi.store/api/health`. Ручной запуск доступен через `workflow_dispatch`, только когда выбран `main`.
 
-Хостинг должен поддерживать Python 3.11+, CGI/Python и Passenger через ispmanager, домен должен быть привязан к этой услуге, а из приложения должен быть доступен исходящий HTTPS к Groq. В панели управления для домена включите CGI/Python и выберите Python 3.11 или новее. Создайте сайт как отдельный домен, не автоподдомен. REG.RU описывает запуск Python/Flask через `passenger_wsgi.py` и перезапуск созданием `.restart-app`; проект использует собственный WSGI без внешних Python-библиотек ([инструкция REG.RU по Flask](https://help.reg.ru/support/hosting/php-asp-net-i-skripty/kak-ustanovit-flask-na-hosting)).
+Хостинг должен поддерживать Python 3.11+, CGI/Python и Passenger через ispmanager, домен должен быть привязан к этой услуге, а из приложения должен быть доступен исходящий HTTPS к GigaChat и OAuth. В панели управления для домена включите CGI/Python и выберите Python 3.11 или новее. Создайте сайт как отдельный домен, не автоподдомен. REG.RU описывает запуск Python/Flask через `passenger_wsgi.py` и перезапуск созданием `.restart-app`; проект использует собственный WSGI без внешних Python-библиотек ([инструкция REG.RU по Flask](https://help.reg.ru/support/hosting/php-asp-net-i-skripty/kak-ustanovit-flask-na-hosting)).
 
 ### Первичная настройка хостинга
 
@@ -116,7 +116,7 @@ Workflow `.github/workflows/deploy-regru.yml` выполняет Python-тест
 2. Подключитесь по SSH и проверьте доступные интерпретаторы командой `ls -la /opt/python/*/bin/python`. Создайте `~/poker-trainer-venv` командой `/opt/python/python-3.11.X/bin/python -m venv ~/poker-trainer-venv`, заменив версию на установленную 3.11 или новее. Passenger-вход использует этот интерпретатор, если он существует. Внешние Python-пакеты проекту не нужны.
 3. Включите HTTPS для домена в панели REG.RU. Убедитесь, что `https://nirs.ukidoshi.store` открывается.
 4. Убедитесь, что SSH-доступ включён на тарифе (у REG.RU он отсутствует на «Хост-Лайт»). Добавьте публичный ключ отдельной пары для GitHub Actions в панели/SSH-настройках хостинга. Не используйте пароль аккаунта как секрет workflow. В документации REG.RU SSH доступен на виртуальном хостинге кроме «Хост-Лайт»; подключение выполняется под основным логином услуги ([SSH на виртуальном хостинге](https://help.reg.ru/support/hosting/dostupy-i-podklyucheniye-panel-upravleniya-ftp-ssh/rabota-po-ssh-na-virtualnom-hostinge)).
-5. Создайте `.env` в корне сайта на хостинге с `GROQ_API_KEY`, `LLM_BASE_URL` и `LLM_MODEL`. Workflow не переносит и не удаляет `.env`. Установите права на `.env` так, чтобы его мог читать пользователь хостинга, но не посторонние. Объедините правила из репозитория `.htaccess` с существующим файлом, чтобы HTTP-запросы не могли читать `.env` или `passenger_wsgi.py`; не заменяйте файл целиком, если в нём есть другие настройки. Файл `code/.htaccess` в комплекте деплоя запрещает HTTP-доступ к исходникам внутри `code/`.
+5. Создайте `.env` в корне сайта на хостинге с настройками GigaChat из актуального `.env.example`. Workflow не переносит и не удаляет `.env`. Установите права на `.env` так, чтобы его мог читать пользователь хостинга, но не посторонние. Объедините правила из репозитория `.htaccess` с существующим файлом, чтобы HTTP-запросы не могли читать `.env` или `passenger_wsgi.py`; не заменяйте файл целиком, если в нём есть другие настройки. Файл `code/.htaccess` в комплекте деплоя запрещает HTTP-доступ к исходникам внутри `code/`.
 6. Проверьте, что document root предназначен для этого приложения: rsync обновляет файлы сайта и удаляет старые файлы проекта после загрузки, сохраняя `.env`, `.htaccess`, `.htpasswd`, `.well-known/`, `uploads/`, `storage/`, `api/` и `cgi-bin/`.
 
 ### Настройка GitHub
@@ -138,6 +138,16 @@ Workflow `.github/workflows/deploy-regru.yml` выполняет Python-тест
 | `VPS_PORT` | порт SSH; если пропустить, используется `22` |
 | `DEPLOY_URL` | URL health-check; по умолчанию `https://nirs.ukidoshi.store` |
 
-`VPS_KNOWN_HOSTS` хранит публичный ключ сервера, а не секретный ключ пользователя. Получите его через `ssh-keyscan` и сравните fingerprint с данными REG.RU/поддержки перед добавлением. Настройте ограничение на окружение `production`, чтобы секреты деплоя не использовались из PR или другой ветки. Ключ Groq хранится только в `.env` на хостинге и не передаётся в GitHub Actions.
+`VPS_KNOWN_HOSTS` хранит публичный ключ сервера, а не секретный ключ пользователя. Получите его через `ssh-keyscan` и сравните fingerprint с данными REG.RU/поддержки перед добавлением. Настройте ограничение на окружение `production`, чтобы секреты деплоя не использовались из PR или другой ветки. Ключ GigaChat хранится только в `.env` на хостинге и не передаётся в GitHub Actions.
 
-На `push` в `main` запустится `CI and deploy to REG.RU`. Успех состоит из двух jobs: `Verify and package`, затем `Deploy production`. Последний шаг делает запрос на `/api/health`. Отдельно отправьте в чат простой вопрос и проверьте ответ с источниками: health проверяет только доступность приложения, не Groq. Также проверьте, что запросы к `/.env` и `/code/server/rag.py` запрещены хостингом.
+На `push` в `main` запустится `CI and deploy to REG.RU`. Успех состоит из двух jobs: `Verify and package`, затем `Deploy production`. Последний шаг делает запрос на `/api/health`. Отдельно отправьте в чат простой вопрос и проверьте ответ с источниками: health проверяет только доступность приложения, не GigaChat. Также проверьте, что запросы к `/.env` и `/code/server/rag.py` запрещены хостингом.
+
+## GigaChat-3-Ultra (текущий провайдер)
+
+Скопируйте настройки из `.env.example` в корневой `.env` локально и на хостинге. `GIGACHAT_CREDENTIALS` — готовый ключ авторизации из проекта GigaChat (Base64 Client ID:Client Secret), без префикса Basic; это не временный access token. `GIGACHAT_SCOPE=GIGACHAT_API_PERS`, `LLM_MODEL=GigaChat-3-Ultra`, `LLM_BASE_URL=https://api.giga.chat/v1`, `LLM_PROVIDER=gigachat`. OAuth выполняется по HTTPS на `ngw.devices.sberbank.ru:9443`, генерация — на `api.giga.chat:443`; оба адреса должны быть доступны с хостинга. Токен автоматически обновляется, вручную хранить его не нужно.
+
+Если проверка сертификата OAuth завершается ошибкой, скачайте доверенный PEM-сертификат по официальной инструкции Сбера и задайте абсолютный путь `GIGACHAT_CA_BUNDLE=/путь/вне/корня/сайта/russian_trusted_root_ca_pem.crt`. Проверка TLS не отключается; путь добавляет CA к системным доверенным сертификатам. Файл храните вне синхронизируемой директории сайта.
+
+После изменения `.env` на хостинге выполните `touch .restart-app` в корне сайта. Для CLI загрузите `.env` в окружение и выполните `python -X utf8 code/server/ask.py "Что такое кикер?"`. Health не проверяет доступ к модели. При 401 проверьте ключ, при 403/404 — доступность Ultra для проекта, при 429 — квоту.
+
+Ultra по документации доступна физлицам в Freemium, а не на платных тарифах. Источники: [модель](https://developers.sber.ru/docs/ru/gigachat/models/gigachat-3-ultra), [OAuth](https://developers.sber.ru/docs/ru/gigachat/api/reference/rest/gigachat-api), [схема ответа](https://developers.sber.ru/docs/ru/gigachat/guides/structured-output), [сертификаты](https://developers.sber.ru/docs/ru/gigachat/certificates). Разделы выше про Groq относятся к прежним прогонам: для них явно задавайте `LLM_PROVIDER=groq` и прежние URL/модель/ключ.
