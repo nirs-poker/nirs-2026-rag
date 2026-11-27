@@ -63,7 +63,7 @@ class CorpusTests(unittest.TestCase):
 class RagTests(unittest.TestCase):
     def test_groq_defaults_and_key_alias(self):
         with patch.dict("os.environ", {
-            "GROQ_API_KEY": "test-groq-key", "LLM_API_KEY": "old-generic-key",
+            "LLM_PROVIDER": "groq", "GROQ_API_KEY": "test-groq-key", "LLM_API_KEY": "old-generic-key",
         }, clear=True):
             client = LLM.from_env()
         self.assertEqual(client.base_url, "https://api.groq.com/openai/v1")
