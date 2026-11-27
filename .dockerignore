@@ -1,0 +1,10 @@
+.git
+.env
+.env.*
+**/node_modules
+**/__pycache__
+**/dist
+data
+docker/certs
+*.pem
+*.crt

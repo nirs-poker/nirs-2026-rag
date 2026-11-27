@@ -151,3 +151,41 @@ Workflow `.github/workflows/deploy-regru.yml` выполняет Python-тест
 После изменения `.env` на хостинге выполните `touch .restart-app` в корне сайта. Для CLI загрузите `.env` в окружение и выполните `python -X utf8 code/server/ask.py "Что такое кикер?"`. Health не проверяет доступ к модели. При 401 проверьте ключ, при 403/404 — доступность Ultra для проекта, при 429 — квоту.
 
 Ultra по документации доступна физлицам в Freemium, а не на платных тарифах. Источники: [модель](https://developers.sber.ru/docs/ru/gigachat/models/gigachat-3-ultra), [OAuth](https://developers.sber.ru/docs/ru/gigachat/api/reference/rest/gigachat-api), [схема ответа](https://developers.sber.ru/docs/ru/gigachat/guides/structured-output), [сертификаты](https://developers.sber.ru/docs/ru/gigachat/certificates). Разделы выше про Groq относятся к прежним прогонам: для них явно задавайте `LLM_PROVIDER=groq` и прежние URL/модель/ключ.
+
+## Локально через Docker Compose
+
+Окружение использует AlmaLinux 8.10, Python 3.14.6, Passenger 6.2.0 и Apache 2.4.37 из репозитория AlmaLinux 8. Приложение и БД запускаются на родной архитектуре компьютера, без platform=linux/amd64. Локальная БД — MySQL 8.0.46, для которой доступны amd64 и arm64; на сервере — Percona 8.0.25-15. Точного совпадения сборок БД нет, SQL-параметры сохранены. Версия `8.0.25-15` соответствует [релизу Percona](https://docs.percona.com/percona-server/8.0/release-notes/Percona-Server-8.0.25-15.html). RPM-патчи Apache, ядро, конфигурация ispmanager, прокси, HTTPS и лимиты shared hosting не скопированы. Базовые образы закреплены digest; RPM-пакеты AlmaLinux могут обновляться; это воспроизведение версий и способа запуска приложения, а не побитовая копия сервера.
+
+1. Установите и запустите Docker с Compose v2. В Windows используйте Docker Desktop с WSL2 и Linux-контейнерами; на Apple Silicon — нативный arm64. Первая компиляция Python/Passenger может занять значительное время.
+2. Создайте `.env` из `.env.example`, настройте GigaChat и задайте два отдельных локальных пароля: `DOCKER_MYSQL_ROOT_PASSWORD` и `DOCKER_MYSQL_PASSWORD`. Не используйте пароль production-БД. Существующий `.env` не перезаписывайте.
+3. Скопируйте доверенный PEM-сертификат Минцифры в `docker/certs/russian_trusted_root_ca_pem.crt`. Каталог исключён из Git и контекста сборки. Можно использовать тот же официальный сертификат, что уже настроен локально. В контейнере Compose задаёт `GIGACHAT_CA_BUNDLE=/certs/russian_trusted_root_ca_pem.crt`, независимо от пути в локальном `.env`.
+4. Выполните `docker compose up --build -d`. Сайт доступен на http://localhost:8001/, API — http://localhost:8001/api/health. Сборка фронтенда происходит в Docker, локальные Python/Node не нужны.
+
+Для разработки интерфейса: `docker compose --profile dev up -d`, затем откройте http://localhost:5176/frontend.html. Исходники React подключены с хоста, зависимости хранятся в отдельном volume, `/api` проксируется к Apache. Для обновления собранного фронтенда на порту 8001 повторите `docker compose up --build -d app`.
+
+Python-исходники подключены с хоста только для чтения. После их изменения или изменения `.env` используйте `docker compose up -d --force-recreate app` (обычный restart не обновляет переменные окружения). `.restart-app` на REG.RU — механизм панели хостинга; локально контейнер пересоздаётся напрямую.
+
+Локальная БД доступна из контейнеров как `db:3306`, с компьютера — `127.0.0.1:3307`; база `poker_trainer`, пользователь `poker`. Настроены `sql_mode=NO_ENGINE_SUBSTITUTION`, `utf8mb4`, `utf8mb4_0900_ai_ci`, `lower_case_table_names=0`, `time_zone=SYSTEM`. Фактическая системная часовая зона хостинга пока неизвестна; `SYSTEM` не гарантирует одинаковое время. БД пока не используется кодом тренера и не подключается к production. Пароли инициализируют только новый volume; изменение `.env` не меняет пароль существующей БД.
+
+Команды проверки:
+
+```bash
+docker compose config --quiet
+docker compose ps
+docker compose logs --tail=100 app
+docker compose exec app python3 --version
+docker compose exec app passenger-config --version
+docker compose exec app httpd -v
+docker compose exec db sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" mysql -u poker poker_trainer -e "SELECT VERSION(), @@sql_mode, @@character_set_server, @@collation_server, @@lower_case_table_names, @@time_zone;"'
+docker compose run --rm --no-deps -v "$PWD/code/tests:/app/code/tests:ro" app python3 -X utf8 -m unittest discover -s code/tests -v
+```
+
+Проверьте health и вопрос о кикере с источниками. Health не обращается к GigaChat; локальный Docker также зависит от сетевой доступности провайдера. `docker compose down` останавливает окружение, сохраняя БД; `docker compose down -v` удаляет локальные данные БД и зависимости Node.
+
+Для PowerShell на Windows команды Compose такие же. Копирование сертификата: `Copy-Item "C:\путь\russian_trusted_root_ca_pem.crt" docker/certs/`. Запуск тестов в PowerShell:
+
+```powershell
+docker compose run --rm --no-deps -v "${PWD}/code/tests:/app/code/tests:ro" app python3 -X utf8 -m unittest discover -s code/tests -v
+```
+
+Не переносите volume между MySQL 8.0.46 и Percona 8.0.25-15: для проверки старой версии нужна отдельная БД и логический экспорт/импорт. Образ 8.0.46 выбран для нативной работы на ARM и x86, он не подтверждает совместимость SQL с серверной 8.0.25.
