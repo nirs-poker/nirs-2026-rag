@@ -20,3 +20,7 @@ GitHub Actions и Passenger/WSGI опубликованы на REG.RU (`nirs.uki
 ## Открыто
 
 - Q-005: происхождение префлоп-части PokerBench.
+
+## Локальное окружение
+
+В ветке `infra/docker-local` подготовлен Compose с AlmaLinux 8.10, Python 3.14.6, Apache/Passenger 6.2.0 и MySQL 8.0.46 локально (на хостинге Percona 8.0.25-15) по данным хостинга, а также опциональным Vite. MySQL пока не используется приложением. Порядок первого запуска и выбор режима описаны в README. Результаты проверки — в Service/verification.

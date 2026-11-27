@@ -1,0 +1,56 @@
+name: poker-trainer
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    ports:
+      - "127.0.0.1:8001:80"
+    env_file: .env
+    environment:
+      GIGACHAT_CA_BUNDLE: /certs/russian_trusted_root_ca_pem.crt
+    volumes:
+      - ./code/server:/app/code/server:ro
+      - ./passenger_wsgi.py:/app/passenger_wsgi.py:ro
+      - ./docker/certs:/certs:ro
+  db:
+    image: mysql:8.0.46@sha256:7dcddc01f13bab2f15cde676d44d01f61fc9f99fe7785e86196dfc07d358ae2b
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DOCKER_MYSQL_ROOT_PASSWORD:?Set DOCKER_MYSQL_ROOT_PASSWORD in .env}
+      MYSQL_DATABASE: poker_trainer
+      MYSQL_USER: poker
+      MYSQL_PASSWORD: ${DOCKER_MYSQL_PASSWORD:?Set DOCKER_MYSQL_PASSWORD in .env}
+    command:
+      - --sql-mode=NO_ENGINE_SUBSTITUTION
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --lower-case-table-names=0
+      - --default-time-zone=SYSTEM
+    ports:
+      - "127.0.0.1:3307:3306"
+    volumes:
+      - mysql-native-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", 'MYSQL_PWD="$$MYSQL_PASSWORD" mysql -h 127.0.0.1 -u poker -D poker_trainer -e "SELECT 1" >/dev/null']
+      interval: 10s
+      timeout: 5s
+      retries: 20
+  frontend:
+    profiles: [dev]
+    image: node:24-bookworm-slim@sha256:873f586f3794f52281bd039bf02c048a0be08fde619338f9941bad1eb6b34530
+    working_dir: /app/code/client
+    ports:
+      - "127.0.0.1:5176:5176"
+    environment:
+      API_TARGET: http://app
+    volumes:
+      - ./code/ports.json:/app/code/ports.json:ro
+      - ./code/client:/app/code/client
+      - node-modules:/app/code/client/node_modules
+    command: sh -c "npm ci && npx vite --host 0.0.0.0"
+    depends_on:
+      app:
+        condition: service_healthy
+volumes:
+  mysql-native-data:
+  node-modules:
