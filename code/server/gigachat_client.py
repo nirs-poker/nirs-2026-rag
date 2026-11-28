@@ -40,6 +40,9 @@ class GigaChatLLM(LLM):
                    os.getenv("GIGACHAT_SCOPE", "GIGACHAT_API_PERS"),
                    os.getenv("GIGACHAT_CA_BUNDLE", ""))
 
+    def token_limit(self):
+        return 1024
+
     def response_format(self):
         return {"type": "json_schema", "schema": RESPONSE_FORMAT["json_schema"]["schema"],
                 "strict": True}

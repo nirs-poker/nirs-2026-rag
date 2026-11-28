@@ -100,7 +100,7 @@ def run(args):
         "model": None if args.search_only else model.model, "k": args.k,
         "mrr_depth": args.mrr_depth, "search_only": args.search_only,
         "system_prompt": None if args.search_only else SYSTEM,
-        "generation": None if args.search_only else ({"temperature": 0, "reasoning_effort": "low", "max_tokens": 2048} if model.base_url == "https://api.groq.com/openai/v1" and model.model in ("openai/gpt-oss-20b", "openai/gpt-oss-120b") else {"temperature": 0, "max_tokens": 450}),
+        "generation": None if args.search_only else ({"temperature": 0, "reasoning_effort": "low", "max_tokens": 2048} if model.base_url == "https://api.groq.com/openai/v1" and model.model in ("openai/gpt-oss-20b", "openai/gpt-oss-120b") else {"temperature": 0, "max_tokens": model.token_limit()}),
         "delay_seconds": args.delay, "retries": args.retries,
         "corpus_sha256": hashlib.sha256(CORPUS.read_bytes()).hexdigest(),
         "questions_sha256": hashlib.sha256(QUESTIONS.read_bytes()).hexdigest(),

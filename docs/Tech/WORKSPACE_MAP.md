@@ -23,7 +23,7 @@ code/
       OFL.txt                  - лицензия шрифта
   server/                      - прототип RAG по теории
     prepare_corpus.py           - подготовка JSONL корпуса из Word-исходников
-    retrieval.py                - собственный индекс BM25 и поиск
+    retrieval.py                - собственный BM25, поиск и вводный подбор для общих вопросов
     rag.py                      - выбор клиента модели, проверка структуры и ссылок
     gigachat_client.py          - GigaChat v1, OAuth, кэш токена и TLS
     theory_answers.py           - узкие ответы по источникам: слои банков, формат и минимум префлоп-рейза
@@ -79,3 +79,7 @@ code/
 При добавлении или переносе модулей карта обновляется в том же Pull Request.
 
 Локальный Docker: `compose.yaml` — app/db и профиль dev; `docker/Dockerfile` — сборка React, Python и Passenger на AlmaLinux; `docker/httpd.conf` — виртуальный хост WSGI; `docker/certs/` — локальный CA вне Git; `.dockerignore` — исключение секретов из сборки.
+
+`docker/reload.py` — наблюдение за Python-файлами и маркер перезапуска Passenger только для профиля dev; compose volume passenger-restart связывает наблюдатель и app.
+
+`code/server/conversation.py` — валидация истории и стиля, ограниченные просьбы оформления, уточнение предыдущего термина и проверка наличия документов о явно названной другой разновидности покера. `code/client/src/modules/dialogue.ts` — выбор переписки и лимиты истории перед отправкой API. `code/client/tests/dialogue.test.ts` — изоляция и ограничения, запуск `npm run test:dialogue` на Node 22.12+/24.

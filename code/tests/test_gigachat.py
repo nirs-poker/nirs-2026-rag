@@ -43,6 +43,7 @@ class GigaChatTests(unittest.TestCase):
         self.assertEqual(request.full_url, 'https://api.giga.chat/v1/chat/completions')
         self.assertEqual(request.get_header('Authorization'), 'Bearer temporary-token')
         payload = json.loads(request.data)
+        self.assertEqual(payload['max_tokens'], 1024)
         self.assertIn('schema', payload['response_format'])
         self.assertNotIn('json_schema', payload['response_format'])
         self.assertNotIn('reasoning_effort', payload)

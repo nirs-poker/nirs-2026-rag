@@ -1,6 +1,7 @@
 name: poker-trainer
 services:
   app:
+    image: poker-trainer-app
     build:
       context: .
       dockerfile: docker/Dockerfile
@@ -13,6 +14,7 @@ services:
       - ./code/server:/app/code/server:ro
       - ./passenger_wsgi.py:/app/passenger_wsgi.py:ro
       - ./docker/certs:/certs:ro
+      - passenger-restart:/app/tmp
   db:
     image: mysql:8.0.46@sha256:7dcddc01f13bab2f15cde676d44d01f61fc9f99fe7785e86196dfc07d358ae2b
     environment:
@@ -35,6 +37,23 @@ services:
       interval: 10s
       timeout: 5s
       retries: 20
+  reloader:
+    profiles: [dev]
+    image: poker-trainer-app
+    pull_policy: never
+    user: app
+    working_dir: /app
+    command: python3 -u /tools/reload.py
+    healthcheck:
+      disable: true
+    volumes:
+      - ./docker/reload.py:/tools/reload.py:ro
+      - ./code/server:/app/code/server:ro
+      - ./passenger_wsgi.py:/app/passenger_wsgi.py:ro
+      - passenger-restart:/app/tmp
+    depends_on:
+      app:
+        condition: service_healthy
   frontend:
     profiles: [dev]
     image: node:24-bookworm-slim@sha256:873f586f3794f52281bd039bf02c048a0be08fde619338f9941bad1eb6b34530
@@ -52,5 +71,6 @@ services:
       app:
         condition: service_healthy
 volumes:
+  passenger-restart:
   mysql-native-data:
   node-modules:

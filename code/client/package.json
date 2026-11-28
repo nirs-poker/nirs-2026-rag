@@ -3,11 +3,14 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "engines": { "node": "^22.12.0 || >=24.0.0" },
+  "engines": {
+    "node": "^22.12.0 || >=24.0.0"
+  },
   "scripts": {
     "dev": "vite --open /frontend.html",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview --open /frontend.html"
+    "preview": "vite preview --open /frontend.html",
+    "test:dialogue": "node --experimental-strip-types --test tests/dialogue.test.ts"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.9.0",

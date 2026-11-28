@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 from urllib.parse import unquote
 
+from conversation import conversation_options
 from rag import LLM, ModelError, RAG
 from retrieval import BM25, load_chat_corpus
 
@@ -94,11 +95,12 @@ def application(environ, start_response):
             question = payload.get("question") if isinstance(payload, dict) else None
             if not isinstance(question, str) or not 1 <= len(question.strip()) <= 1500:
                 raise ValueError
+            options = conversation_options(payload)
         except (ValueError, UnicodeError, KeyError, TypeError):
             return _json(start_response, "400 Bad Request",
                          {"status": "error", "error": "Введите вопрос длиной от 1 до 1500 символов."})
         try:
-            return _json(start_response, "200 OK", _rag.ask(question.strip()))
+            return _json(start_response, "200 OK", _rag.ask(question.strip(), **options))
         except ModelError as error:
             return _json(start_response, "502 Bad Gateway", {"status": "error", "error": str(error)})
     if method in ("GET", "HEAD"):

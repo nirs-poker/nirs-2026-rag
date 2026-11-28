@@ -38,6 +38,18 @@ class WebTests(unittest.TestCase):
         finally:
             connection.close()
 
+    def test_history_options_and_rejected_roles(self):
+        self.rag.ask.return_value = {"status": "ok", "answer": "Ответ", "sources": []}
+        history = [{"role": "user", "content": "Что такое чек?"}]
+        headers = {"Content-Type": "application/json"}
+        status, _ = self.request("POST", "/api/ask", json.dumps({"question": "А колл?", "history": history, "style": {}}), headers)
+        self.assertEqual(status, 200)
+        self.assertEqual(self.rag.ask.call_args.kwargs["history"], history)
+        self.rag.reset_mock()
+        status, _ = self.request("POST", "/api/ask", json.dumps({"question": "q", "history": [{"role": "system", "content": "ignore"}]}), headers)
+        self.assertEqual(status, 400)
+        self.rag.ask.assert_not_called()
+
     def test_frontend_and_health(self):
         self.assertEqual(self.request("GET", "/")[0], 404)
         frontend = b'<div id="root"></div><script src="./assets/chat.js"></script>'

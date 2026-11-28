@@ -44,6 +44,17 @@ class ExpandedTheoryTests(unittest.TestCase):
             with self.subTest(question=question):
                 self.assertIn(expected, [hit.document.id for hit in self.index.search(question)])
 
+    def test_postflop_definition_and_attribution(self):
+        for question in ("Что такое постфлоп?", "Что значит postflop?", "Что такое post-flop?",
+                         "Какие улицы относятся к постфлопу?", "Что происходит на постфлопе?"):
+            with self.subTest(question=question):
+                self.assertIn("GL25", [hit.document.id for hit in self.index.search(question)])
+        doc = self.index.documents["GL25"]
+        for street in ("флоп", "тёрн", "ривер"):
+            self.assertIn(street, doc.text)
+        self.assertTrue(doc.source_file.startswith("https://"))
+        self.assertTrue(any("CC BY 4.0" in note for note in doc.source_notes))
+
     def test_rag_passes_glossary_context_and_returns_citation(self):
         captured = []
 

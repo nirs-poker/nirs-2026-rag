@@ -7,11 +7,19 @@ function isAskSource(value: unknown): value is AskSource {
     && 'text' in value && typeof value.text === 'string'
 }
 
+function isStyle(value: unknown): boolean {
+  if (typeof value !== 'object' || value === null) return false
+  return 'prefix' in value && typeof value.prefix === 'string' && Array.from(value.prefix).length <= 32
+    && 'verbosity' in value && ['normal', 'brief', 'detailed'].includes(String(value.verbosity))
+    && 'simple' in value && typeof value.simple === 'boolean'
+}
+
 function isAskResponse(value: unknown): value is AskResponse {
   return typeof value === 'object' && value !== null
-    && 'status' in value && (value.status === 'ok' || value.status === 'no_sources')
+    && 'status' in value && (value.status === 'ok' || value.status === 'no_sources' || value.status === 'style_updated')
     && 'answer' in value && typeof value.answer === 'string' && value.answer.trim().length > 0
     && 'sources' in value && Array.isArray(value.sources) && value.sources.every(isAskSource)
+    && (!('style' in value) || isStyle(value.style))
 }
 
 export const api = {

@@ -1,4 +1,5 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
+import type { StylePreferences } from '../api/contracts'
 import type { Message } from '../modules/chatTypes'
 import { loadWorkspace } from '../modules/sessionStorage'
 
@@ -9,6 +10,10 @@ const chatsSlice = createSlice({
     createChat(state, { payload: { id, message } }: PayloadAction<{ id: string; message: Message }>) {
       state.chats.unshift({ id, title: 'Новый чат', draft: '', messages: [message], hands: [], selectedHandId: null })
       state.activeChatId = id
+    },
+    setChatStyle(state, { payload }: PayloadAction<{ chatId: string; style: StylePreferences }>) {
+      const chat = state.chats.find(chat => chat.id === payload.chatId)
+      if (chat) chat.style = payload.style
     },
     openChat(state, { payload: id }: PayloadAction<string>) {
       if (state.chats.some(chat => chat.id === id)) state.activeChatId = id
@@ -62,5 +67,5 @@ const chatsSlice = createSlice({
   },
 })
 
-export const { createChat, openChat, openNewDraft, renameChat, deleteChat, setDraft, addMessage, selectHand, leaveHand, setHandOpen, setStep } = chatsSlice.actions
+export const { setChatStyle, createChat, openChat, openNewDraft, renameChat, deleteChat, setDraft, addMessage, selectHand, leaveHand, setHandOpen, setStep } = chatsSlice.actions
 export default chatsSlice.reducer
