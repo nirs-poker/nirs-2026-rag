@@ -15,7 +15,7 @@ class FakeRag:
         return {"status": "ok", "answer": question, "sources": [], "retrieved": []}
 
 
-def request(path="/", method="GET", body=None, content_type="application/json"):
+def request(path="/", method="GET", body=None, content_type="application/json", rag=None):
     raw = b"" if body is None else json.dumps(body).encode("utf-8")
     environ = {
         "REQUEST_METHOD": method,
@@ -30,7 +30,7 @@ def request(path="/", method="GET", body=None, content_type="application/json"):
         result["status"] = status
         result["headers"] = dict(headers)
 
-    with patch.object(wsgi, "_rag", FakeRag()):
+    with patch.object(wsgi, "_rag", rag or FakeRag()):
         result["body"] = b"".join(wsgi.application(environ, start_response))
     return result
 
@@ -56,6 +56,19 @@ class WsgiTests(unittest.TestCase):
             response = request(path, "POST", {"question": "Что такое кикер?"})
             self.assertEqual(response["status"], "200 OK")
             self.assertEqual(json.loads(response["body"])["answer"], "Что такое кикер?")
+
+    def test_history_options_and_rejected_roles(self):
+        from unittest.mock import Mock
+        rag = Mock()
+        rag.ask.return_value = {"status": "style_updated", "answer": "ОК", "sources": []}
+        history = [{"role": "user", "content": "Что такое чек?"}]
+        response = request("/api/ask", "POST", {"question": "А колл?", "history": history, "style": {}}, rag=rag)
+        self.assertEqual(response["status"], "200 OK")
+        self.assertEqual(rag.ask.call_args.kwargs["history"], history)
+        rag.reset_mock()
+        response = request("/api/ask", "POST", {"question": "q", "history": [{"role": "system", "content": "ignore"}]}, rag=rag)
+        self.assertEqual(response["status"], "400 Bad Request")
+        rag.ask.assert_not_called()
 
     def test_invalid_requests_return_client_errors(self):
         invalid_json = request("/api/ask", "POST", {"question": ""})

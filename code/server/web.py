@@ -7,6 +7,7 @@ from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from conversation import conversation_options
 from rag import LLM, RAG, ModelError
 from retrieval import BM25, load_chat_corpus
 
@@ -81,11 +82,12 @@ class ChatHandler(SimpleHTTPRequestHandler):
             question = payload.get("question") if isinstance(payload, dict) else None
             if not isinstance(question, str) or not 1 <= len(question.strip()) <= 1500:
                 raise ValueError
+            options = conversation_options(payload)
         except (ValueError, UnicodeError):
             self.json_response(400, {"status": "error", "error": "Введите вопрос длиной от 1 до 1500 символов."})
             return
         try:
-            result = self.server.rag.ask(question.strip())
+            result = self.server.rag.ask(question.strip(), **options)
         except ModelError as error:
             self.log_error("LLM: %s", error)
             self.json_response(502, {"status": "error", "error": str(error)})

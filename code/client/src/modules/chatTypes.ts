@@ -1,4 +1,4 @@
-import type { AskSource } from '../api/contracts'
+import type { AskSource, StylePreferences } from '../api/contracts'
 
 export const ranks = ['A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2'] as const
 export const suits = { s: '♠', h: '♥', d: '♦', c: '♣' } as const
@@ -42,6 +42,7 @@ export interface Chat {
   id: string
   title: string
   draft: string
+  style?: StylePreferences
   messages: Message[]
   hands: Hand[]
   selectedHandId: string | null

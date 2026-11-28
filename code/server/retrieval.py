@@ -34,6 +34,23 @@ FORMS = {
 }
 
 
+INTRO_IDS = ("D01", "D02", "D05", "D06", "D11")
+INTRO_QUERY = "карманные общие карты блайнды позиции действия круг торговли старшинство рук"
+_GAME = r"(?:покер|покера|покере|холдем|холдема|холдеме|техасский холдем|техасского холдема|техасском холдеме)"
+INTRO_PATTERNS = (
+    rf"что такое {_GAME}",
+    rf"как (?:научиться )?играть в {_GAME}(?: (?:новичку|с нуля))?",
+    rf"(?:(?:объясни|расскажи|покажи)(?: мне)? )?(?:основные |базовые )?правила(?: игры)?(?: в)? {_GAME}(?: для (?:новичка|новичков|начинающих))?",
+    rf"с чего начать(?: (?:новичку|новичкам))? в {_GAME}",
+)
+
+
+def is_intro_question(question):
+    # Match the whole request so extra topics are never silently discarded.
+    normalized = " ".join(re.findall(r"[а-яa-z0-9]+", question.lower().replace("ё", "е")))
+    return any(re.fullmatch(pattern, normalized) for pattern in INTRO_PATTERNS)
+
+
 def tokens(text):
     text = text.lower().replace("ё", "е").replace("‑", "-").replace("3 бет", "3-бет").replace("олл ин", "олл-ин")
     text = re.sub(r"(?<=\d)\s*бб\b", "bb", text)
@@ -107,8 +124,10 @@ class BM25:
     def search(self, question, k=TOP_K):
         if k < 1:
             raise ValueError("k должно быть положительным.")
+        intro = is_intro_question(question) and all(doc_id in self.documents for doc_id in INTRO_IDS)
+        query = INTRO_QUERY if intro else question
         scores = defaultdict(float)
-        for word in dict.fromkeys(tokens(question)):
+        for word in dict.fromkeys(tokens(query)):
             postings = self.index.get(word)
             if not postings:
                 continue
@@ -118,4 +137,6 @@ class BM25:
                 norm = self.k1 * (1 - self.b + self.b * self.lengths[doc_id] / self.avgdl)
                 scores[doc_id] += idf * tf * (self.k1 + 1) / (tf + norm)
         ranked = sorted(scores, key=lambda doc_id: (-scores[doc_id], doc_id))
+        if intro:
+            ranked = list(INTRO_IDS) + [doc_id for doc_id in ranked if doc_id not in INTRO_IDS]
         return [Hit(self.documents[doc_id], scores[doc_id]) for doc_id in ranked[:k]]

@@ -1,6 +1,8 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 import { requestTrainerReply, questionError } from '../modules/trainerApi'
-import { addMessage, createChat, deleteChat } from './chatsSlice'
+import { buildDialogueRequest } from '../modules/dialogue'
+import type { Workspace } from '../modules/chatTypes'
+import { addMessage, createChat, deleteChat, setChatStyle } from './chatsSlice'
 
 interface RequestState {
   pending: boolean
@@ -20,22 +22,25 @@ interface ChatQuestion {
 export const sendChatQuestion = createAsyncThunk<
   Omit<RequestState, 'pending'>,
   ChatQuestion,
-  { state: { trainer: TrainerState }; rejectValue: string }
+  { state: { trainer: TrainerState; workspace: Workspace }; rejectValue: string }
 >(
   'trainer/sendChatQuestion',
-  async ({ chatId, handId, text, newChat }, { dispatch, signal, requestId, rejectWithValue }) => {
+  async ({ chatId, handId, text, newChat }, { dispatch, getState, signal, requestId, rejectWithValue }) => {
     const question = text.trim()
     const error = questionError(question)
     if (error) return rejectWithValue(error)
 
+    const chat = newChat ? undefined : getState().workspace.chats.find(chat => chat.id === chatId)
+    const payload = buildDialogueRequest(question, chat, handId)
     const message = { id: requestId, role: 'user' as const, text: question }
     if (newChat) dispatch(createChat({ id: chatId, message }))
     else dispatch(addMessage({ chatId, handId, message }))
 
     try {
-      const reply = await requestTrainerReply(question, signal)
-      dispatch(addMessage({ chatId, handId, message: reply }))
-      return { status: '', messageId: reply.id }
+      const reply = await requestTrainerReply(payload, signal)
+      if (reply.style) dispatch(setChatStyle({ chatId, style: reply.style }))
+      dispatch(addMessage({ chatId, handId, message: reply.message }))
+      return { status: '', messageId: reply.message.id }
     } catch (error) {
       const reason = error instanceof Error && error.name === 'Error'
         ? error.message

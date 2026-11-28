@@ -1,4 +1,5 @@
 import { api } from '../api'
+import type { AskRequest, StylePreferences } from '../api/contracts'
 import type { Message } from './chatTypes'
 
 export function questionError(question: string): string | undefined {
@@ -7,7 +8,10 @@ export function questionError(question: string): string | undefined {
   }
 }
 
-export async function requestTrainerReply(question: string, signal: AbortSignal): Promise<Message> {
-  const reply = await api.ask({ question }, signal)
-  return { id: crypto.randomUUID(), role: 'bot', text: reply.answer, sources: reply.sources }
+export async function requestTrainerReply(payload: AskRequest, signal: AbortSignal): Promise<{ message: Message; style?: StylePreferences }> {
+  const reply = await api.ask(payload, signal)
+  return {
+    message: { id: crypto.randomUUID(), role: 'bot', text: reply.answer, sources: reply.sources },
+    style: reply.style,
+  }
 }
