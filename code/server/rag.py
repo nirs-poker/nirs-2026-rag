@@ -59,6 +59,15 @@ class ModelError(RuntimeError):
     pass
 
 
+def validate_result(result):
+    if (not isinstance(result, dict) or type(result.get("supported")) is not bool
+            or not isinstance(result.get("answer"), str)
+            or not isinstance(result.get("sources"), list)
+            or not all(isinstance(source, str) for source in result["sources"])):
+        raise ModelError("Модель вернула ответ в неверном формате.")
+    return result
+
+
 HTTP_ERROR_HINTS = {
     400: "Проверьте, поддерживает ли модель наш формат JSON-ответа и параметры запроса.",
     401: "API отклонил ключ. Проверьте LLM_API_KEY в том окне, где запущен проект.",
@@ -116,7 +125,10 @@ class LLM:
     def response_format(self):
         return RESPONSE_FORMAT
 
-    def answer(self, question, documents):
+    def token_limit(self):
+        return 450
+
+    def build_request(self, question, documents, stream=False):
         messages = [
             {"role": "system", "content": SYSTEM},
             {"role": "user", "content": json.dumps(
@@ -125,13 +137,15 @@ class LLM:
         ]
         payload = {
             "model": self.model, "messages": messages, "temperature": 0,
-            "max_tokens": 450,
+            "max_tokens": self.token_limit(),
             "response_format": self.response_format(),
         }
         if self.base_url == "https://api.groq.com/openai/v1" and self.model in (
             "openai/gpt-oss-20b", "openai/gpt-oss-120b",
         ):
             payload.update(max_tokens=2048, reasoning_effort="low")
+        if stream:
+            payload["stream"] = True
         headers = {"Content-Type": "application/json", "User-Agent": "nirs-poker-trainer/1.0"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
@@ -140,6 +154,10 @@ class LLM:
                               data=json.dumps(payload).encode("utf-8"), headers=headers)
         except ValueError as error:
             raise ModelError("Некорректный адрес API. Проверьте LLM_BASE_URL.") from error
+        return request
+
+    def answer(self, question, documents):
+        request = self.build_request(question, documents)
         try:
             with self.open_request(request) as response:
                 result = json.load(response)
@@ -166,12 +184,23 @@ class LLM:
             raise ModelError("Соединение с моделью прервалось. Проверьте подключение и повторите запрос.") from error
         except (ValueError, AttributeError, KeyError, TypeError, IndexError) as error:
             raise ModelError("API ответил, но формат ответа модели не удалось прочитать.") from error
-        if (not isinstance(result, dict) or type(result.get("supported")) is not bool
-                or not isinstance(result.get("answer"), str)
-                or not isinstance(result.get("sources"), list)
-                or not all(isinstance(source, str) for source in result["sources"])):
-            raise ModelError("Модель вернула ответ в неверном формате.")
-        return result
+        return validate_result(result)
+
+    def answer_stream(self, question, documents):
+        from streaming import provider_result
+        request = self.build_request(question, documents, stream=True)
+        try:
+            with self.open_request(request) as response:
+                yield from provider_result(response)
+        except ModelError:
+            raise
+        except HTTPError as error:
+            raise ModelError(f"API модели вернул HTTP {error.code}. Проверьте доступ и квоту.") from error
+        except (URLError, TimeoutError, OSError) as error:
+            raise ModelError("Не удалось завершить соединение с моделью.") from error
+        except (ValueError, AttributeError, KeyError, TypeError, IndexError, UnicodeError) as error:
+            raise ModelError("Не удалось прочитать JSON потока модели.") from error
+
 
 
 class RAG:
@@ -179,30 +208,47 @@ class RAG:
         self.index = index
         self.llm = llm
 
-    def ask(self, question, k=TOP_K):
-        # Нормализуем начало обычного слова, сохраняя регистр карт и сокращений.
+    def _prepare(self, question, k):
         question = re.sub(r"^[А-ЯЁ](?=[а-яё])", lambda m: m.group().lower(), question.strip())
         hits = self.index.search(question, k)
         retrieved = [{"id": hit.document.id, "score": round(hit.score, 6)} for hit in hits]
-        refusal = {"status": "no_sources", "answer": REFUSAL, "sources": [], "retrieved": retrieved}
-        if not hits:
-            return refusal
-        documents = [
-            {"id": hit.document.id, "title": hit.document.title, "text": hit.document.text}
-            for hit in hits
-        ]
-        exact = grounded_answer(question, documents)
-        if exact is not None:
-            by_id = {doc["id"]: doc for doc in documents}
-            return {"status": "ok", "answer": exact["answer"],
-                    "sources": [by_id[source] for source in exact["sources"]], "retrieved": retrieved}
-        result = self.llm.answer(question, documents)
+        documents = [{"id": hit.document.id, "title": hit.document.title, "text": hit.document.text} for hit in hits]
+        return question, documents, retrieved
+
+    def _finalize(self, result, documents, retrieved):
+        result = validate_result(result)
         if not result["supported"]:
-            return refusal
+            return {"status": "no_sources", "answer": REFUSAL, "sources": [], "retrieved": retrieved}
         by_id = {doc["id"]: doc for doc in documents}
-        source_ids = list(dict.fromkeys(result["sources"]))
+        ids = list(dict.fromkeys(result["sources"]))
         answer = result["answer"].strip()
-        if not answer or not source_ids or any(source not in by_id for source in source_ids):
+        if not answer or not ids or any(source not in by_id for source in ids):
             raise ModelError("Модель вернула ответ без проверяемых ссылок на документы.")
-        return {"status": "ok", "answer": answer,
-                "sources": [by_id[source] for source in source_ids], "retrieved": retrieved}
+        return {"status": "ok", "answer": answer, "sources": [by_id[source] for source in ids], "retrieved": retrieved}
+
+    def ask(self, question, k=TOP_K):
+        question, documents, retrieved = self._prepare(question, k)
+        exact = grounded_answer(question, documents) if documents else None
+        result = ({"supported": True, **exact} if exact is not None else
+                  self.llm.answer(question, documents) if documents else
+                  {"supported": False, "answer": REFUSAL, "sources": []})
+        return self._finalize(result, documents, retrieved)
+
+    def ask_stream(self, question, k=TOP_K):
+        yield {"type": "start"}
+        question, documents, retrieved = self._prepare(question, k)
+        exact = grounded_answer(question, documents) if documents else None
+        if exact is not None or not documents:
+            result = {"supported": True, **exact} if exact is not None else {"supported": False, "answer": REFUSAL, "sources": []}
+            yield {"type": "final", "result": self._finalize(result, documents, retrieved)}
+            return
+        upstream = self.llm.answer_stream(question, documents)
+        try:
+            for event in upstream:
+                if event["type"] == "model_result":
+                    yield {"type": "final", "result": self._finalize(event["result"], documents, retrieved)}
+                    return
+                yield event
+            raise ModelError("Поток завершился без результата модели.")
+        finally:
+            upstream.close()

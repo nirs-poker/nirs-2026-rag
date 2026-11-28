@@ -1,4 +1,4 @@
-"""Локальный сервер чата КТ2, без сторонних Python-пакетов."""
+"""Локальный HTTP-сервер чата КТ2."""
 
 import argparse
 import json
@@ -8,6 +8,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from rag import LLM, RAG, ModelError
+from streaming import events
 from retrieval import BM25, load_chat_corpus
 
 CLIENT = Path(__file__).resolve().parents[1] / "client"
@@ -64,7 +65,7 @@ class ChatHandler(SimpleHTTPRequestHandler):
         self.wfile.write(data)
 
     def do_POST(self):
-        if self.path not in ("/ask", "/api/ask"):
+        if self.path not in ("/ask", "/api/ask", "/api/ask/stream"):
             self.json_response(404, {"status": "error", "error": "Маршрут не найден."})
             return
         if self.headers.get_content_type() != "application/json":
@@ -83,6 +84,23 @@ class ChatHandler(SimpleHTTPRequestHandler):
                 raise ValueError
         except (ValueError, UnicodeError):
             self.json_response(400, {"status": "error", "error": "Введите вопрос длиной от 1 до 1500 символов."})
+            return
+        if self.path == "/api/ask/stream":
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+            self.send_header("Cache-Control", "no-cache, no-transform")
+            self.send_header("X-Accel-Buffering", "no")
+            self.end_headers()
+            stream = events(self.server.rag, question.strip())
+            try:
+                for chunk in stream:
+                    self.wfile.write(chunk)
+                    self.wfile.flush()
+            except (BrokenPipeError, ConnectionResetError):
+                pass
+            finally:
+                stream.close()
+                self.close_connection = True
             return
         try:
             result = self.server.rag.ask(question.strip())

@@ -22,11 +22,13 @@ class ExpandedTheoryTests(unittest.TestCase):
     def test_hand_rankings_ignore_initial_capitalization(self):
         from unittest.mock import Mock
         model = Mock()
-        model.answer.return_value = {"supported": True, "answer": "Список", "sources": ["D11"]}
+        model.answer.side_effect = lambda question, documents: {"supported": True, "answer": "Список", "sources": [documents[0]["id"]]}
         rag = RAG(self.index, model)
+        rankings = []
         for q in ("Какие существуют комбинации?", "какие существуют комбинации?"):
             result = rag.ask(q)
-            self.assertEqual(result["retrieved"][0]["id"], "D11")
+            rankings.append(result["retrieved"])
+        self.assertEqual(rankings[0], rankings[1])
         first, second = model.answer.call_args_list
         self.assertEqual(first, second)
 

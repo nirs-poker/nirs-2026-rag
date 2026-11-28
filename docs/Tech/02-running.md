@@ -2,11 +2,11 @@
 
 ## Быстрый старт для разработчика
 
-Для сервера нужен Python 3.11+. Внешние Python-пакеты и база данных не требуются. Для сборки и запуска интерфейса в Vite нужен Node.js. Команды выполняются из корня репозитория. Подготовленный корпус уже находится в Git.
+Для сервера нужен Python 3.11+. Для лемматизации нужны зависимости из code/server/requirements.txt; база данных пока не требуется. Для сборки и запуска интерфейса в Vite нужен Node.js. Команды выполняются из корня репозитория. Подготовленный корпус уже находится в Git.
 
 1. При первой настройке создайте `.env` из `.env.example`: macOS/Linux — `cp .env.example .env`, Windows PowerShell — `Copy-Item .env.example .env`. Не перезаписывайте уже настроенный `.env`.
 2. Откройте `.env` в редакторе и задайте свой `GIGACHAT_CREDENTIALS`. Остальные значения оставьте как в шаблоне. Ключ не отправляется в чат и не коммитится; `.env` исключён из Git.
-3. Запустите `python -X utf8 code/server/web.py`.
+3. Установите зависимости `python -m pip install -r code/server/requirements.txt`, затем запустите `python -X utf8 code/server/web.py`.
 4. Проверьте `http://127.0.0.1:8001/api/health` и запустите фронтенд по инструкции ниже. Остановка — Ctrl+C. Порт для отдельного запуска сервера можно переопределить через `--port`.
 
 На macOS/Linux вместо `python` может использоваться `python3`, в Windows — `py -3`. Проверьте версию через `python --version`.
@@ -113,7 +113,7 @@ Workflow `.github/workflows/deploy-regru.yml` выполняет Python-тест
 ### Первичная настройка хостинга
 
 1. В ispmanager проверьте document root домена `nirs.ukidoshi.store`, включите Python/CGI и выберите поддерживаемую версию не ниже 3.11.
-2. Подключитесь по SSH и проверьте доступные интерпретаторы командой `ls -la /opt/python/*/bin/python`. Создайте `~/poker-trainer-venv` командой `/opt/python/python-3.11.X/bin/python -m venv ~/poker-trainer-venv`, заменив версию на установленную 3.11 или новее. Passenger-вход использует этот интерпретатор, если он существует. Внешние Python-пакеты проекту не нужны.
+2. Подключитесь по SSH и проверьте доступные интерпретаторы командой `ls -la /opt/python/*/bin/python`. Создайте `~/poker-trainer-venv` командой `/opt/python/python-3.11.X/bin/python -m venv ~/poker-trainer-venv`, заменив версию на установленную 3.11 или новее. Passenger-вход использует этот интерпретатор, если он существует. Зависимости устанавливаются автоматически при деплое в этот venv из wheel-пакетов CI; pip должен быть доступен в окружении. Для ручного запуска после загрузки кода выполните `~/poker-trainer-venv/bin/python -m pip install -r code/server/requirements.txt`.
 3. Включите HTTPS для домена в панели REG.RU. Убедитесь, что `https://nirs.ukidoshi.store` открывается.
 4. Убедитесь, что SSH-доступ включён на тарифе (у REG.RU он отсутствует на «Хост-Лайт»). Добавьте публичный ключ отдельной пары для GitHub Actions в панели/SSH-настройках хостинга. Не используйте пароль аккаунта как секрет workflow. В документации REG.RU SSH доступен на виртуальном хостинге кроме «Хост-Лайт»; подключение выполняется под основным логином услуги ([SSH на виртуальном хостинге](https://help.reg.ru/support/hosting/dostupy-i-podklyucheniye-panel-upravleniya-ftp-ssh/rabota-po-ssh-na-virtualnom-hostinge)).
 5. Создайте `.env` в корне сайта на хостинге с настройками GigaChat из актуального `.env.example`. Workflow не переносит и не удаляет `.env`. Установите права на `.env` так, чтобы его мог читать пользователь хостинга, но не посторонние. Объедините правила из репозитория `.htaccess` с существующим файлом, чтобы HTTP-запросы не могли читать `.env` или `passenger_wsgi.py`; не заменяйте файл целиком, если в нём есть другие настройки. Файл `code/.htaccess` в комплекте деплоя запрещает HTTP-доступ к исходникам внутри `code/`.
@@ -189,3 +189,25 @@ docker compose run --rm --no-deps -v "${PWD}/code/tests:/app/code/tests:ro" app 
 ```
 
 Не переносите volume между MySQL 8.0.46 и Percona 8.0.25-15: для проверки старой версии нужна отдельная БД и логический экспорт/импорт. Образ 8.0.46 выбран для нативной работы на ARM и x86, он не подтверждает совместимость SQL с серверной 8.0.25.
+
+## Сравнение предобработки BM25 для НИРС
+
+Рабочий поиск по умолчанию использует `lemma`; зависимости закреплены в code/server/requirements.txt. Для экспериментов можно создать отдельное окружение:
+
+```bash
+python3 -m venv .venv-search
+.venv-search/bin/python -m pip install -r code/tests/benchmark/requirements-search.txt
+.venv-search/bin/python code/tests/benchmark/compare_search.py --output code/tests/benchmark/results/bm25-local.json
+```
+
+Windows PowerShell: `python -m venv .venv-search`, затем `.venv-search\Scripts\python.exe -m pip install -r code/tests/benchmark/requirements-search.txt` и `.venv-search\Scripts\python.exe code/tests/benchmark/compare_search.py --output code/tests/benchmark/results/bm25-local.json`. Не коммитьте локальное окружение. Для тестов в нём: `python -X utf8 -m unittest discover -s code/tests -v`.
+
+CLI принимает `--preprocessing lemma --search-only`, например `.venv-search/bin/python code/server/ask.py --preprocessing lemma --search-only "Что открывают на ривере?"`. Этот CLI ищет по расширенному корпусу чата; метрики воспроизводите через compare_search.py, который использует фиксированные 30 документов. Без установки морфологии можно сравнить базовые режимы: `python3 code/tests/benchmark/compare_search.py --modes raw lower stop technical legacy --output /tmp/bm25-basic.json`.
+
+Лемматизация установлена рабочим профилем по решению команды; старый режим доступен явно через --preprocessing legacy. Ограничения выборки и результаты — в benchmark/README.md.
+
+### Зависимости при деплое
+
+CI сначала устанавливает code/server/requirements.txt для тестов, затем скачивает только wheel-пакеты в code/server/wheels внутри артефакта. На REG.RU workflow передаёт requirements и wheels, выполняет `~/poker-trainer-venv/bin/python -m pip install --no-index --find-links <корень>/code/server/wheels -r <корень>/code/server/requirements.txt`, затем обновляет остальной код и создаёт .restart-app. Весь Python-venv находится вне корня сайта. Если установки нет или она завершилась ошибкой, синхронизация кода и перезапуск не выполняются. Пакеты pure Python проверены на локальных Python 3.12 и Docker Python 3.14.6. Root и доступ хостинга к PyPI для штатного деплоя не нужны.
+
+После обновления Dockerfile выполните `docker compose up --build -d app`. Проверка: `docker compose exec app python3 -m pip check`. Python3 внутри app теперь использует тот же venv, что и Passenger.

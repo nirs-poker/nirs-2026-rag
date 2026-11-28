@@ -36,6 +36,8 @@
     { "path": "docs/Service/sources.md", "section": "Service", "purpose": "Источники требований S-*", "status": "actual" },
     { "path": "docs/Service/verification.md", "section": "Service", "purpose": "Протокол проверок V-*", "status": "actual" },
 
+    { "path": "docs/Archive/Updates/UPD-002-bm25-preprocessing/README.md", "section": "Archive", "purpose": "Проверенный пакет сравнения предобработки BM25, REQ-027", "status": "actual" },
+
     { "path": "code/server/README.md", "section": "code", "purpose": "RAG по теории: корпус, BM25, Groq-клиент, CLI и локальный сервер", "status": "actual" },
     { "path": "code/tests/README.md", "section": "code", "purpose": "Автотесты и benchmark КТ2", "status": "actual" }
   ]

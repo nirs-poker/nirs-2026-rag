@@ -7,6 +7,7 @@ from pathlib import Path
 from urllib.parse import unquote
 
 from rag import LLM, ModelError, RAG
+from streaming import events
 from retrieval import BM25, load_chat_corpus
 
 ROOT = Path(os.environ.get("POKER_APP_ROOT", Path(__file__).resolve().parents[2])).resolve()
@@ -79,7 +80,7 @@ def application(environ, start_response):
         return _json(start_response, "200 OK", {"status": "ok"}, head=method == "HEAD")
     if path.startswith("/api/") and method != "POST":
         return _json(start_response, "404 Not Found", {"status": "error", "error": "Маршрут не найден."})
-    if method == "POST" and path not in ("/ask", "/api/ask"):
+    if method == "POST" and path not in ("/ask", "/api/ask", "/api/ask/stream"):
         return _json(start_response, "404 Not Found", {"status": "error", "error": "Маршрут не найден."})
     if method == "POST":
         if environ.get("CONTENT_TYPE", "").split(";", 1)[0].strip().lower() != "application/json":
@@ -97,6 +98,11 @@ def application(environ, start_response):
         except (ValueError, UnicodeError, KeyError, TypeError):
             return _json(start_response, "400 Bad Request",
                          {"status": "error", "error": "Введите вопрос длиной от 1 до 1500 символов."})
+        if path == "/api/ask/stream":
+            start_response("200 OK", [("Content-Type", "text/event-stream; charset=utf-8"),
+                                      ("Cache-Control", "no-cache, no-transform"),
+                                      ("X-Accel-Buffering", "no"), ("X-Content-Type-Options", "nosniff")])
+            return events(_rag, question.strip())
         try:
             return _json(start_response, "200 OK", _rag.ask(question.strip()))
         except ModelError as error:

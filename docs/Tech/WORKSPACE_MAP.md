@@ -79,3 +79,5 @@ code/
 При добавлении или переносе модулей карта обновляется в том же Pull Request.
 
 Локальный Docker: `compose.yaml` — app/db и профиль dev; `docker/Dockerfile` — сборка React, Python и Passenger на AlmaLinux; `docker/httpd.conf` — виртуальный хост WSGI; `docker/certs/` — локальный CA вне Git; `.dockerignore` — исключение секретов из сборки.
+
+Исследование поиска: `code/server/preprocessing.py` — семь одинаково применяемых к запросам/документам вариантов; `code/tests/benchmark/compare_search.py` — сравнение без LLM; `search_queries.jsonl` — 12 размеченных запросов с покрытием всех 30 документов; `requirements-search.txt` ссылается на единые зависимости сервера в `code/server/requirements.txt`. Рабочий профиль — lemma; зависимости устанавливаются в Docker/CI/venv хостинга.

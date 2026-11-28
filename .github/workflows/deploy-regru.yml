@@ -32,6 +32,9 @@ jobs:
         with:
           node-version: "24"
 
+      - name: Install Python dependencies
+        run: python -m pip install -r code/server/requirements.txt
+
       - name: Run Python tests
         run: python -X utf8 -m unittest discover -s code/tests -v
 
@@ -45,6 +48,8 @@ jobs:
         run: |
           mkdir -p build/package/code
           cp -R code/server build/package/code/server
+          python -m pip download --only-binary=:all: \
+            -r code/server/requirements.txt -d build/package/code/server/wheels
           cp code/.htaccess build/package/code/.htaccess
           mkdir -p build/package/code/client
           cp -R code/client/dist build/package/code/client/dist
@@ -111,6 +116,18 @@ jobs:
           fi
           target="$DEPLOY_USER@$DEPLOY_HOST"
           ssh_options="ssh -p $DEPLOY_PORT -i $HOME/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts"
+          ssh -i "$HOME/.ssh/deploy_key" -p "$DEPLOY_PORT" \
+            -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            "$target" "mkdir -p '$DEPLOY_PATH/code/server/wheels'"
+          rsync --archive --compress -e "$ssh_options" \
+            build/package/code/server/requirements.txt "$target:$DEPLOY_PATH/code/server/"
+          rsync --archive --compress -e "$ssh_options" \
+            build/package/code/server/wheels/ "$target:$DEPLOY_PATH/code/server/wheels/"
+          ssh -i "$HOME/.ssh/deploy_key" -p "$DEPLOY_PORT" \
+            -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            "$target" "~/poker-trainer-venv/bin/python -m pip install --no-index --find-links '$DEPLOY_PATH/code/server/wheels' -r '$DEPLOY_PATH/code/server/requirements.txt'"
           rsync --archive --compress --delete-after \
             --exclude='/.env' \
             --exclude='/.htaccess' \

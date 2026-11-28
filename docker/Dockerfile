@@ -32,8 +32,10 @@ RUN useradd --create-home app \
     && /opt/python/bin/python3 -m venv /home/app/poker-trainer-venv \
     && mkdir -p /app/public /app/tmp /run/httpd \
     && chown -R app:app /home/app /app
-ENV PATH="/opt/python/bin:${PATH}" POKER_APP_ROOT=/app
+ENV PATH="/home/app/poker-trainer-venv/bin:/opt/python/bin:${PATH}" POKER_APP_ROOT=/app
 WORKDIR /app
+COPY --chown=app:app code/server/requirements.txt code/server/requirements.txt
+RUN python3 -m pip install --no-cache-dir -r code/server/requirements.txt
 COPY --chown=app:app code/server/ code/server/
 COPY --chown=app:app passenger_wsgi.py ./
 COPY --chown=app:app code/ports.json code/ports.json

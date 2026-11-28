@@ -20,7 +20,7 @@ class RetrievalTests(unittest.TestCase):
             Document("B", "", "Статус оплаты внутри приложения"),
             Document("A", "", "Возврат оплаты банковской картой"),
         ]
-        hits = BM25(docs).search("Как происходит возврат оплаты?", 2)
+        hits = BM25(docs, preprocessing="legacy").search("Как происходит возврат оплаты?", 2)
         self.assertEqual([hit.document.id for hit in hits], ["A", "B"])
         self.assertAlmostEqual(hits[0].score, 0.940007, places=5)
         self.assertAlmostEqual(hits[1].score, 0.470004, places=5)
@@ -31,14 +31,14 @@ class RetrievalTests(unittest.TestCase):
         self.assertEqual(index.search("абракадабра"), [])
 
     def test_pokerbench_tokens_and_aliases(self):
-        result = set(tokens("AhQd AKs Ks7h2d OOP_RAISE_14 2.0bb"))
+        result = set(tokens("AhQd AKs Ks7h2d OOP_RAISE_14 2.0bb", mode="legacy"))
         self.assertTrue({"ahqd", "aks", "ks7h2d", "oop_raise_14", "oop", "рейз", "14", "2.0bb", "bb"} <= result)
-        index = BM25([Document("D01", "Размер", "2.0bb OOP_RAISE_14")])
+        index = BM25([Document("D01", "Размер", "2.0bb OOP_RAISE_14")], preprocessing="legacy")
         self.assertEqual(index.search("рейз 2,0 ББ")[0].document.id, "D01")
 
     def test_fold_word_forms_find_fold_rule(self):
         index = BM25([Document("fold", "Фолд", "Фишки остаются в банке"),
-                      Document("call", "Колл", "Доплата ставки")])
+                      Document("call", "Колл", "Доплата ставки")], preprocessing="legacy")
         for question in ("игрок сбрасывает", "игрок сбросил", "вклад сбросившего"):
             self.assertEqual(index.search(question)[0].document.id, "fold")
 

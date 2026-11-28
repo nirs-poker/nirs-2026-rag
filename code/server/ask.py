@@ -5,17 +5,19 @@ import json
 
 from rag import LLM, RAG, ModelError
 from retrieval import BM25, load_chat_corpus
+from preprocessing import DEFAULT_MODE, MODES
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("question")
     parser.add_argument("--search-only", action="store_true")
+    parser.add_argument("--preprocessing", choices=MODES, default=DEFAULT_MODE)
     args = parser.parse_args()
     question = args.question.strip()
     if not 1 <= len(question) <= 1500:
         parser.error("Введите вопрос длиной от 1 до 1500 символов.")
-    index = BM25(load_chat_corpus())
+    index = BM25(load_chat_corpus(), preprocessing=args.preprocessing)
     try:
         if args.search_only:
             result = [
